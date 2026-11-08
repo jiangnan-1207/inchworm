@@ -2,6 +2,8 @@
 
 把 Inchworm 解码接到 Janus-Pro-7B，并对三种方法运行**完整 GenEval**。支持普通 Linux GPU 服务器，也支持 Slurm；不依赖某所学校的 VPN、账号或固定目录。
 
+追加任务入口：[Janus-Pro-1B / LlamaGen 延迟与显存、LlamaGen 100 张平均回溯、三模型九对定性图](docs/REQUESTED_EXPERIMENTS.md)。新增的 LlamaGen Inchworm 适配器尚待真实 GPU 检查，作业会先检查再继续生成。
+
 | 方法名 | 内容 | 完整输出 |
 | --- | --- | --- |
 | `janus_baseline` | Janus-Pro-7B 原生采样，CFG 5，384px | 553 prompts × 4 = 2212 张 |
