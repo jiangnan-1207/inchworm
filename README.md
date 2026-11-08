@@ -4,6 +4,8 @@
 
 追加任务入口：[Janus-Pro-1B / LlamaGen 延迟与显存、LlamaGen 100 张平均回溯、三模型九对定性图](docs/REQUESTED_EXPERIMENTS.md)。新增的 LlamaGen Inchworm 适配器尚待真实 GPU 检查，作业会先检查再继续生成。
 
+独立新方法：[inchworm_variant：原路径保底＋自适应温度提议＋混合位置](docs/INCHWORM_VARIANT.md)。保留原方法及旧任务入口；新方法的 GPU 效果仍待实际验证。
+
 | 方法名 | 内容 | 完整输出 |
 | --- | --- | --- |
 | `janus_baseline` | Janus-Pro-7B 原生采样，CFG 5，384px | 553 prompts × 4 = 2212 张 |
