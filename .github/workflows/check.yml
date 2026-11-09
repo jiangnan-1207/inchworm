@@ -1,6 +1,46 @@
 name: Standard-library checks
 on: [push, pull_request]
 jobs:
+  alignment-judge-imports:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        judge: [dpg, tiif]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install pip==24.0 setuptools==69.5.1 wheel==0.45.1
+      - if: matrix.judge == 'dpg'
+        run: python -m pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cpu
+      - if: matrix.judge == 'tiif'
+        run: python -m pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install -r requirements/alignment-${{ matrix.judge }}.txt
+      - run: python -m pip check
+      - if: matrix.judge == 'dpg'
+        run: python -c "from modelscope.pipelines import pipeline; from modelscope.models.multi_modal.mplug import MPlugForVisualQuestionAnswering; print('MPLUG_CPU_IMPORT_OK')"
+      - if: matrix.judge == 'tiif'
+        run: python -c "from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor; from paddleocr import PaddleOCR; print('TIIF_CPU_IMPORT_OK')"
+  alignment-datasets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: actions/checkout@v4
+        with:
+          repository: TencentQQGYLab/ELLA
+          ref: 3c228f1dc6c4d3cad0a47493816151a419f14db3
+          path: benchmarks/ELLA
+      - uses: actions/checkout@v4
+        with:
+          repository: A113N-W3I/TIIF-Bench
+          ref: cca586f40f057c1590d819ae3807ea4e27620e84
+          path: benchmarks/TIIF-Bench
+      - run: python -m unittest discover -s tests -p 'test_alignment.py' -v
   checks:
     runs-on: ubuntu-latest
     steps:

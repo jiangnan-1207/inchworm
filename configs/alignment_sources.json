@@ -1,0 +1,7 @@
+{
+  "ELLA": ["https://github.com/TencentQQGYLab/ELLA.git", "3c228f1dc6c4d3cad0a47493816151a419f14db3"],
+  "TIIF-Bench": ["https://github.com/A113N-W3I/TIIF-Bench.git", "cca586f40f057c1590d819ae3807ea4e27620e84"],
+  "LlamaGen": ["https://github.com/FoundationVision/LlamaGen.git", "ce98ec41803a74a90ce68c40ababa9eaeffeb4ec"],
+  "qwen_repo": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "qwen_revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5"
+}

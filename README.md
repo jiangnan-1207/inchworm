@@ -130,3 +130,4 @@ python -m compileall -q .
 ```
 
 原论文、模型权重、生成图片、环境文件和个人配置不放在此仓库。第三方来源及许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。仓库公开供协作访问；本项目新增代码的项目级开源许可证尚未指定。
+DPG-Bench 与 TIIF testmini 的原版 Inchworm 对照评测见 [ALIGNMENT_BENCHMARKS.md](docs/ALIGNMENT_BENCHMARKS.md)。TIIF 使用本地 Qwen2.5-VL-7B/PaddleOCR 单独标注口径。
