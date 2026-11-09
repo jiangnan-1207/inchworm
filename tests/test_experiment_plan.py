@@ -1,12 +1,15 @@
 import unittest
-from experiment_plan import PAIR_PROMPTS, select_100, summarize
+from experiment_plan import PAIR_PROMPTS, pair_prompts_for_model, select_100, summarize
 from protocol import TASKS
 
 
 class ExperimentTests(unittest.TestCase):
-    def test_nine_distinct_pairs_and_exactly_100_stratified_prompts(self):
-        self.assertEqual(len(PAIR_PROMPTS),9)
-        self.assertEqual(len(set(PAIR_PROMPTS)),9)
+    def test_ninety_distinct_pairs_and_exactly_100_stratified_prompts(self):
+        self.assertEqual(len(PAIR_PROMPTS),90)
+        self.assertEqual(len(set(PAIR_PROMPTS)),90)
+        pairs=[pair_prompts_for_model(m) for m in ['janus1b','llamagen','janus7b']]
+        self.assertTrue(all(len(group)==30 for group in pairs))
+        self.assertEqual(len({i for group in pairs for i,_ in group}),90)
         rows=[{'tag':t} for t in TASKS for _ in range(100)]
         ids=select_100(rows)
         self.assertEqual(ids,select_100(rows))

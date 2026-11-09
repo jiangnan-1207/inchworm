@@ -5,10 +5,12 @@ from inchworm_variant_rules import TemperatureConfig, adaptive_temperature
 
 
 class VariantBackend:
-    def __init__(self,base,temperature=TemperatureConfig()):
+    def __init__(self,base,temperature=TemperatureConfig(),proposal_mode='temperature'):
         temperature.validate()
+        if proposal_mode not in ['topk','temperature']: raise ValueError('Unknown proposal mode')
         self.base=base
         self.temperature=temperature
+        self.proposal_mode=proposal_mode
 
     def predict(self,state): return self.base.predict(state)
     def sample(self,prediction): return self.base.sample(prediction)
@@ -23,6 +25,10 @@ class VariantBackend:
         return float((p.max().log()-p[token].log()).item())
 
     def alternatives(self,prediction,original,k):
+        if self.proposal_mode=='topk':
+            draws=self.base.alternatives(prediction,original,k)
+            return draws,{'temperature':None,'base_entropy':prediction.entropy,'original_token':original,
+                'sampled_tokens':draws,'with_replacement':False,'original_token_allowed':False,'mode':'topk'}
         import torch
         temperature=adaptive_temperature(prediction.entropy,self.temperature)
         # FP64 preserves small support probabilities when sharpening. Neither
@@ -34,4 +40,4 @@ class VariantBackend:
         draws=torch.multinomial(q,k,replacement=True).tolist()
         return draws,{'temperature':temperature,'base_entropy':prediction.entropy,
                       'original_token':original,'sampled_tokens':draws,
-                      'with_replacement':True,'original_token_allowed':True}
+                      'with_replacement':True,'original_token_allowed':True,'mode':'temperature'}

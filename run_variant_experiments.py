@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import time
 
-from experiment_plan import PAIR_PROMPTS, select_100, summarize
+from experiment_plan import pair_prompts_for_model, select_100, summarize
 from inchworm_variant import VariantConfig
 from inchworm_variant_rules import TemperatureConfig
 from protocol import atomic_json, bind_run, load_prompts, sha
@@ -51,7 +51,7 @@ def main():
     if a.scope in ['profile','both']:
         cases.extend(('profile',i,rows[i]['prompt'],42+4*i) for i in select_100(rows))
     if a.scope in ['pairs','both']:
-        cases.extend(('pairs',i,PAIR_PROMPTS[i],10042+i) for i in range(group*3,group*3+3))
+        cases.extend(('pairs',i,text,10042+i) for i,text in pair_prompts_for_model(a.model))
     import torch
     import numpy as np
     from variant_model_runner import load_model

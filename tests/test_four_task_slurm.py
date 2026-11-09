@@ -21,7 +21,7 @@ import json,os,sys
 from pathlib import Path
 p=Path(os.environ['FAKE_SLURM_LOG'])
 rows=p.read_text().splitlines() if p.exists() else []
-record={'args':sys.argv[1:],'model':os.environ['EXPERIMENT_MODEL'],'phase':os.environ['FOUR_TASK_PHASE']}
+record={'args':sys.argv[1:],'model':os.environ['EXPERIMENT_MODEL'],'phase':os.environ['FOUR_TASK_PHASE'],'variant':os.environ.get('FOUR_TASK_VARIANT')}
 with p.open('a') as out: out.write(json.dumps(record)+'\\n')
 print(100+len(rows))
 ''')
@@ -52,13 +52,18 @@ QOS=""
             result=self.call(env,'--submit','task4','testfull')
             self.assertEqual(result.returncode,0,result.stderr)
             rows=[json.loads(x) for x in Path(env['FAKE_SLURM_LOG']).read_text().splitlines()]
-            self.assertEqual([(r['model'],r['phase']) for r in rows],
-                [('janus1b','generate'),('janus1b','score'),('llamagen','generate'),('llamagen','score')])
+            self.assertEqual(len(rows),12)
+            expected=[(model,version,phase) for model in ['janus1b','llamagen']
+                for version in ['guard_only','guard_temperature','guard_gap'] for phase in ['generate','score']]
+            self.assertEqual([(r['model'],r['variant'],r['phase']) for r in rows],expected)
             self.assertIn('--array=0-3%2',rows[0]['args'])
             self.assertIn('--dependency=afterok:100',rows[1]['args'])
+            self.assertIn('--dependency=afterok:101',rows[2]['args'])
             self.assertIn('--dependency=afterok:102',rows[3]['args'])
+            self.assertIn('--dependency=afterok:106',rows[7]['args'])
+            self.assertFalse(any(arg.startswith('--dependency=') for arg in rows[6]['args']))
             self.assertNotEqual(self.call(env,'--submit','task4','testfull').returncode,0)
-            self.assertEqual(len(Path(env['FAKE_SLURM_LOG']).read_text().splitlines()),4)
+            self.assertEqual(len(Path(env['FAKE_SLURM_LOG']).read_text().splitlines()),12)
 
     def test_check_only_does_not_create_submission_journal(self):
         with tempfile.TemporaryDirectory(dir=ROOT/'tests') as folder:
@@ -66,9 +71,18 @@ QOS=""
             result=self.call(env,'--check-only','task4','dryrun','janus1b')
             self.assertEqual(result.returncode,0,result.stderr)
             rows=[json.loads(x) for x in Path(env['FAKE_SLURM_LOG']).read_text().splitlines()]
-            self.assertEqual(len(rows),2)
+            self.assertEqual(len(rows),6)
             self.assertTrue(all('--test-only' in r['args'] for r in rows))
             self.assertFalse((Path(folder)/'data/logs/dryrun.task4.submissions.txt').exists())
+
+    def test_single_selected_version_does_not_submit_other_ablations(self):
+        with tempfile.TemporaryDirectory(dir=ROOT/'tests') as folder:
+            env=self.fixture(folder); env['ABLATIONS']='guard_temperature'
+            result=self.call(env,'--submit','task4','single','llamagen')
+            self.assertEqual(result.returncode,0,result.stderr)
+            rows=[json.loads(x) for x in Path(env['FAKE_SLURM_LOG']).read_text().splitlines()]
+            self.assertEqual(len(rows),2)
+            self.assertTrue(all(r['variant']=='guard_temperature' for r in rows))
 
     def test_invalid_or_repeated_model_is_rejected_before_sbatch(self):
         with tempfile.TemporaryDirectory(dir=ROOT/'tests') as folder:

@@ -2,6 +2,8 @@
 
 状态：已实现用户确认的规则，单独入口和结果目录；模型 GPU 数值及图像效果尚待实际运行。不替换原 Inchworm，也不预填效果结论。
 
+**任务4现在默认跑三个消融版本**：`guard_only`（仅保底，4H+原top-k）、`guard_temperature`（保底+温度，4H）、`guard_gap`（保底+2H/2G，原top-k且不调温）。三版都保留两阶段筛选和严格保底。本页下方完整三改动方案仍称 `combined`，仅显式选择时运行。版本配置由 `ablation_plan.py` 固定，完整使用说明见 [四项任务](FOUR_TASKS.md)。
+
 ## 已确认的算法
 
 1. **混合位置**：M=4，先取窗口内预测熵 H 最大的2个位置，再从剩余位置取 G 最大的2个位置。`G = log(p_max) - log(p_original)`。不足4个位置时全部选取，并列按位置先后。H 和 G 均来自调温前原采样分布。
@@ -61,7 +63,7 @@ q_i(z) = exp(log(p_i(z)) / T_i) / sum_v exp(log(p_i(v)) / T_i)
 
 在一个新的代码 checkout 中，复用已经准备完成的资产。先从旧任务目录复制本机 `configs/local.sh`，再运行 CPU 资产准备脚本来建立本 checkout 的 benchmarks 引用（见 [追加实验说明](REQUESTED_EXPERIMENTS.md)）。不要更新已经运行或排队任务所使用的旧 checkout。
 
-默认先做9个提示词、三方法各一张，总共27张图（每个模型3个不同提示词，均与旧定性实验一致）；每模型仅一GPU作业，三方法复用已加载模型。各方法一次完整 warmup，不纳入结果。
+独立的 `submit_variant.sh` 仍用于完整三改动方案与两种旧方法的三方法定性对比：每模型30个不同提示词，三个模型共90个，每词三方法各一张，总共270张。用户此次任务3则使用 `four_tasks.sh task3`，仅两方法、共180张。各方法一次完整warmup，不纳入结果。
 
 ```bash
 # 在新目录、CPU 资产准备成功后
@@ -88,6 +90,6 @@ python run_variant_experiments.py --root /path/to/checkout --data-root /path/to/
 
 可用 `--tmin --tmax --h0 --delta` 修改初值；修改任何配置后使用新的输出目录。Slurm 默认使用上表初值。
 
-输出位于 `$DATA_ROOT/outputs/<RUN_TAG>/<MODEL>/<METHOD>/pairs/` 或 `profile/`。`pairs_summary.json` 是3提示词定性子集统计，`profile_summary.json` 是100张性能子集统计；两者都不是完整 GenEval 分数。保存原图、逐图JSON、各方法汇总和 completed.json。
+输出位于 `$DATA_ROOT/outputs/<RUN_TAG>/<MODEL>/<METHOD>/pairs/` 或 `profile/`。`pairs_summary.json` 是30提示词定性子集统计，`profile_summary.json` 是100张性能子集统计；两者都不是完整GenEval分数。保存原图、逐图JSON、各方法汇总和completed.json。
 
 模型作业先运行新方法规则与缓存测试、Janus/LlamaGen 既有适配器检查，再做 warmup 和生成。纯 Python 测试通过不等于真实 GPU、性能或质量验证完成。

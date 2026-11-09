@@ -4,7 +4,7 @@
 
 1. Janus-Pro-1B、LlamaGen GPT-XL 各选同一批 100 个提示词，各生成 backbone 100 张 + Inchworm 100 张。batch=1，包含一次完整 warmup / 方法，warmup 不纳入统计。100 个提示词使用固定种子按 GenEval 六类别近似比例抽样，不是完整 benchmark 分数。
 2. LlamaGen 的上述 100 张 Inchworm 图片同时用于平均回溯次数：回溯事件数总和 / 100，包含零回溯图片。这里的“次数”是一整个窗口的分支选择事件，不是候选分支数或 token 数。
-3. Janus-Pro-1B、LlamaGen、Janus-Pro-7B 各用 3 个不同提示词，共 9 个不同提示词，每词生成 baseline / Inchworm 一对，共 18 张。两方法同提示词、同种子；一律保存，不挑选最佳图。
+3. Janus-Pro-1B、LlamaGen、Janus-Pro-7B 各用30个不同提示词，三个模型合计90个不同提示词，每词生成 baseline / Inchworm 一对，共180张。两方法同提示词、同种子，全部保存。用户可从中选定性展示图，不能用选例代替完整benchmark评分。
 
 测量记录 `latency_seconds`（文本准备 + 图像 token + VQ 解码 + 像素回传 CPU）、`token_seconds`、PyTorch CUDA allocated / reserved 峰值，模型加载与 PNG 写盘不计入 latency。模型、T5、VQ 均常驻 GPU，显存峰值包含它们。样本间释放无用张量并清理缓存，CUDA 同步后计时；每方法执行一次完整热身，运行时交替两方法顺序。不要把这份 batch=1 latency 与旧四图批次的分摊耗时混比。
 
@@ -49,7 +49,7 @@ bash scripts/submit_requested.sh --submit extra01
 
 - `janus1b/profile_summary.json`：1B 两方法平均/中位总延迟、平均 token 时间、最大峰值显存、平均回溯。
 - `llamagen/profile_summary.json`：LlamaGen 的同类指标，其中 `results.inchworm.mean_backtracks` 对应任务 2。
-- 三个模型各自 `backbone/pairs/` 和 `inchworm/pairs/`：9 对图片及逐图 JSON。
+- 三个模型各自 `backbone/pairs/` 和 `inchworm/pairs/`：每模型30对，共90对图片及逐图JSON；提示词固定在 `configs/qualitative_prompts.json`。
 - 三个模型各自 `completed.json`：完整完成标记。
 
 峰值显存报告 `max_peak_allocated_bytes / 1024**3`（GiB）；reserved 峰值另列，不能用 `nvidia-smi` 某一次截图替代。表格尚无完整 100 张时不出汇总；可在相同配置与 GPU 型号上手工重新运行该失败 worker，已有逐图结果校验后跳过。不要改源码后继续写进同一 RUN_TAG。

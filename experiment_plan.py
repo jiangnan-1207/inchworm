@@ -1,19 +1,21 @@
 """Deterministic samples and reporting for the three requested experiments."""
-from collections import Counter
+import json
+from pathlib import Path
 import random
 import statistics
 
-PAIR_PROMPTS = [
-    'A photo of a red apple to the left of a blue cup on a wooden table.',
-    'A photo of three yellow bananas on a white plate.',
-    'A photo of a green backpack and a red chair.',
-    'A photo of a blue bicycle to the right of a yellow car.',
-    'A photo of two red apples and one green apple in a bowl.',
-    'A photo of a black cat under a white table.',
-    'A photo of a red book on top of a blue suitcase.',
-    'A photo of four orange carrots on a white kitchen counter.',
-    'A photo of a yellow umbrella next to a purple backpack.',
-]
+PAIR_MODELS=['janus1b','llamagen','janus7b']
+PAIR_COUNT=30
+PROMPTS_BY_MODEL=json.loads((Path(__file__).parent/'configs/qualitative_prompts.json').read_text(encoding='utf-8'))
+PAIR_PROMPTS=[p for model in PAIR_MODELS for p in PROMPTS_BY_MODEL[model]]
+if any(len(PROMPTS_BY_MODEL[m])!=PAIR_COUNT for m in PAIR_MODELS) or len(set(PAIR_PROMPTS))!=90:
+    raise ValueError('Expected thirty distinct prompts per model, ninety globally')
+
+
+def pair_prompts_for_model(model,count=PAIR_COUNT):
+    if model not in PAIR_MODELS or not 1<=count<=PAIR_COUNT: raise ValueError('Invalid qualitative selection')
+    offset=PAIR_MODELS.index(model)*PAIR_COUNT
+    return [(offset+i,prompt) for i,prompt in enumerate(PROMPTS_BY_MODEL[model][:count])]
 
 
 def select_100(rows):

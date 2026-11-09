@@ -1,4 +1,4 @@
-"""Batch-one profiling and nine distinct qualitative pairs; no GenEval score."""
+"""Batch-one profiling and thirty qualitative pairs per model; no GenEval score."""
 import argparse
 from dataclasses import asdict
 import gc
@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 import time
 
-from experiment_plan import PAIR_PROMPTS, select_100, summarize
+from experiment_plan import pair_prompts_for_model, select_100, summarize
 from inchworm_core import Config, generate
 from protocol import atomic_json, bind_run, load_prompts, sha
 
@@ -146,7 +146,7 @@ def main():
     rows=load_prompts(args.root/'benchmarks/geneval/prompts/evaluation_metadata.jsonl')
     ids=select_100(rows)
     group={'janus1b':0,'llamagen':1,'janus7b':2}[args.model]
-    pairs=[(i,PAIR_PROMPTS[i]) for i in range(group*3,group*3+3)]
+    pairs=pair_prompts_for_model(args.model)
     out=args.out/args.model
     profiling=args.scope in ['profile','both'] and args.model!='janus7b'
     qualitative=args.scope in ['pairs','both']
@@ -174,7 +174,7 @@ def main():
                 'peak_allocated_bytes':torch.cuda.max_memory_allocated(),
                 'peak_reserved_bytes':torch.cuda.max_memory_reserved()}
         for method in ['backbone','inchworm']:
-            image,_=measure(PAIR_PROMPTS[group*3],method,0); del image
+            image,_=measure(pairs[0][1],method,0); del image
         records=[]
         cases=[]
         if profiling:
@@ -201,7 +201,8 @@ def main():
     if profiling:
         summary=summarize(records,[(m,i) for m in ['backbone','inchworm'] for i in ids])
         atomic_json(out/'profile_summary.json',{'specification':specification,'results':summary})
-    atomic_json(out/'completed.json',{'profiling_images':len(records),'qualitative_images':6 if qualitative else 0,'status':'completed'})
+    atomic_json(out/'completed.json',{'profiling_images':len(records),'qualitative_pairs':len(pairs) if qualitative else 0,
+        'qualitative_images':2*len(pairs) if qualitative else 0,'status':'completed'})
     print('REQUESTED_EXPERIMENTS_OK',args.model,flush=True)
 
 

@@ -15,12 +15,16 @@ class VariantConfig:
     temperature: TemperatureConfig = field(default_factory=TemperatureConfig)
     improvement_margin: float = 0.0
     max_checks: int | None = None
+    position_mode: str = 'mixed'
+    proposal_mode: str = 'temperature'
 
     def validate(self):
         self.controller.validate()
         self.temperature.validate()
         if self.controller.positions != 4:
-            raise ValueError('This confirmed variant uses M=4 (two H plus two G)')
+            raise ValueError('These variants use M=4')
+        if self.position_mode not in ['entropy','mixed'] or self.proposal_mode not in ['topk','temperature']:
+            raise ValueError('Unknown ablation mode')
         if self.controller.max_backtracks is not None:
             raise ValueError('Use max_checks for the variant, not max_backtracks')
         if not isfinite(self.improvement_margin) or self.improvement_margin < 0:
@@ -37,6 +41,8 @@ def generate(backend, initial_state, length, cfg=VariantConfig(), on_event=None)
     use the base sampling distribution, never the sharpened proposal entropy.
     """
     cfg.validate()
+    if hasattr(backend,'proposal_mode') and backend.proposal_mode!=cfg.proposal_mode:
+        raise ValueError('Backend proposal mode differs from configuration')
     if not isinstance(length,int) or length<1:
         raise ValueError('length must be a positive integer')
     base=cfg.controller
@@ -80,8 +86,12 @@ def generate(backend, initial_state, length, cfg=VariantConfig(), on_event=None)
         original_tokens=tokens[s:f].copy()
         original_entropies=entropies[s:f].copy()
         original_state=state
-        gaps=[backend.gap(records[j-s],tokens[j]) for j in range(s,f)]
-        offsets=mixed_positions(original_entropies,gaps)
+        if cfg.position_mode=='mixed':
+            gaps=[backend.gap(records[j-s],tokens[j]) for j in range(s,f)]
+            offsets=mixed_positions(original_entropies,gaps)
+        else:
+            gaps=[None]*(f-s)
+            offsets=sorted(range(f-s),key=lambda j:(-original_entropies[j],j))[:base.positions]
         finalists=[]; summaries=[]; proposals=[]
         candidate_id=0
         for offset in offsets:
@@ -132,7 +142,7 @@ def generate(backend, initial_state, length, cfg=VariantConfig(), on_event=None)
             'best_candidate_score':winner['score'],'improvement_margin':cfg.improvement_margin,
             'positions':[s+j+1 for j in offsets],'proposals':proposals,'candidates':summaries,
             'survivors':[{k:c[k] for k in ['id','mean_entropy','lookahead_entropy','score']} for c in finalists],
-            'terminal_mean_only':terminal})
+            'terminal_mean_only':terminal,'position_mode':cfg.position_mode,'proposal_mode':cfg.proposal_mode})
         s=f; records.clear(); finalists.clear()
         del original,original_state,winner,candidate,candidate_state,original_pred
 

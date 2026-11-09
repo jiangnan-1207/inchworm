@@ -8,10 +8,10 @@
 | --- | --- | --- | --- |
 | task1 | Janus-Pro-1B、LlamaGen GPT-XL | 每模型 backbone100张 + 原Inchworm100张，共400张 | batch=1 latency和peak memory对比 |
 | task2 | LlamaGen + 原Inchworm | 读取task1的100张结果，不重复生成 | 平均回溯次数，零回溯图片计入分母 |
-| task3 | Janus-Pro-1B、LlamaGen、Janus-Pro-7B | 共9个不同提示词，每词backbone/原Inchworm各1张，共18张 | 定性对比，不选最佳图 |
-| task4 | Janus-Pro-1B + 新方法、LlamaGen + 新方法 | 每模型553提示词×4张=2212，共4424张 | 完整GenEval分数 |
+| task3 | Janus-Pro-1B、LlamaGen、Janus-Pro-7B | 每模型30个不同提示词，共90对、180张 | 定性候选图，供用户挑选展示 |
+| task4 | Janus-Pro-1B、LlamaGen各3个消融版本 | 每版本每模型553×4=2212，6组共13272张 | 完整GenEval分数 |
 
-“原Inchworm”与独立新方法 `inchworm_variant` 分开。新方法为原路径保底、温度有放回抽样、2H+2G位置，并保留8选2的两阶段筛选。参数和限制见 [新方法说明](INCHWORM_VARIANT.md)。性能/回溯用的100提示词子集不是完整GenEval分数。
+“原Inchworm”与消融版本分开，任务1、2仍为原方法。任务4改为：`guard_only`（仅保底，4H、原top-k）、`guard_temperature`（保底+温度，4H）、`guard_gap`（保底+2H/2G，原top-k、不调温）。三个版本均保留8选2、原路径额外入选、delta=0严格降分接受。原三改动全开的 `combined` 仍保留，默认不纳入此次六组评分。参数见 [新方法说明](INCHWORM_VARIANT.md)。100提示词性能子集不是完整GenEval分数。
 
 ## 每位同学先完成一次安装
 
@@ -84,39 +84,52 @@ bash scripts/four_tasks.sh task2 perf01
 
 输出 `mean_backtracks = total_backtracks / 100`。原方法每次触发后的窗口替换计一次，不把每个候选分支算一次。若不足100张，程序拒绝输出完整汇总。
 
-### task3：九对图片
+### task3：每模型30对图片
 
 ```bash
-bash scripts/four_tasks.sh task3 janus1b pairs01
-bash scripts/four_tasks.sh task3 llamagen pairs01
-bash scripts/four_tasks.sh task3 janus7b pairs01
+bash scripts/four_tasks.sh task3 janus1b pairs30_01
+bash scripts/four_tasks.sh task3 llamagen pairs30_01
+bash scripts/four_tasks.sh task3 janus7b pairs30_01
 ```
 
-9个不同提示词固定在 `experiment_plan.py`；每模型3个，每词两方法同prompt、同seed。路径：
+90个不同提示词固定在 `configs/qualitative_prompts.json`；每模型30个，三个模型之间也不重复，每词两方法同prompt、同seed。路径：
 
 ```text
-<DATA_ROOT>/outputs/pairs01/<MODEL>/backbone/pairs/
-<DATA_ROOT>/outputs/pairs01/<MODEL>/inchworm/pairs/
+<DATA_ROOT>/outputs/pairs30_01/<MODEL>/backbone/pairs/
+<DATA_ROOT>/outputs/pairs30_01/<MODEL>/inchworm/pairs/
 ```
 
-共18张，逐图JSON包含提示词和种子。每个模型的 `completed.json` 应显示 `qualitative_images=6`。
+每模型60张，共180张，逐图JSON包含提示词和种子。每模型 `completed.json` 应显示 `qualitative_pairs=30`、`qualitative_images=60`。可以从中挑选定性展示，但保留原始完整结果，展示时注明选例，不能用挑选后的图片替代task4完整集合算分。
 
-### task4：新方法完整GenEval
+### task4：三个消融版本的完整GenEval
 
-只有一张GPU时，以下命令依次完成完整生成、覆盖检查和评分。每模型2212张，需要较长运行时间，不会只跑100张：
+只有一张GPU时，以下命令会对每个模型依次完成三个版本的完整生成、覆盖检查和评分。每模型3×2212=6636张，两模型共13272张，不会只跑100张：
 
 ```bash
-bash scripts/four_tasks.sh task4 janus1b newfull01
-bash scripts/four_tasks.sh task4 llamagen newfull01
+bash scripts/four_tasks.sh task4 janus1b ablations01
+bash scripts/four_tasks.sh task4 llamagen ablations01
 ```
 
-其中任意一组可交给一位同学在自己的服务器独立完成，无需等待另一组。新方法配置固定为 Tmin=.5、Tmax=1、h0=2 nats、delta=0，允许原token和重复抽样；后缀不额外调温，回溯检查无次数上限。
+可按整个模型分给两位同学独立完成。三个版本位置/提议策略已分开；仅第二版使用 Tmin=.5、Tmax=1、h0=2 nats 的有放回温度采样，允许原token和重复。第一、三版沿用原top-k，排除原token、不重复。所有后缀不额外调温，检查无次数上限，delta=0。
+
+只跑某一版时，在末尾明确添加版本名：
+
+```bash
+bash scripts/four_tasks.sh task4 janus1b guard_only01 guard_only
+bash scripts/four_tasks.sh task4 llamagen guard_gap01 guard_gap
+# 旧的三改动全开方案仍可显式运行
+bash scripts/four_tasks.sh task4 janus1b combined01 combined
+```
 
 结果文件：
 
 ```text
-<DATA_ROOT>/outputs/newfull01/merged/evaluation/janus1b_inchworm_variant.summary.json
-<DATA_ROOT>/outputs/newfull01/merged/evaluation/llamagen_inchworm_variant.summary.json
+<DATA_ROOT>/outputs/ablations01/merged/evaluation/janus1b_guard_only.summary.json
+<DATA_ROOT>/outputs/ablations01/merged/evaluation/janus1b_guard_temperature.summary.json
+<DATA_ROOT>/outputs/ablations01/merged/evaluation/janus1b_guard_gap.summary.json
+<DATA_ROOT>/outputs/ablations01/merged/evaluation/llamagen_guard_only.summary.json
+<DATA_ROOT>/outputs/ablations01/merged/evaluation/llamagen_guard_temperature.summary.json
+<DATA_ROOT>/outputs/ablations01/merged/evaluation/llamagen_guard_gap.summary.json
 ```
 
 必须满足 `prompts=553`、`images=2212`、`formal_complete_benchmark=true`，再读取 `overall` 与 `task_scores`。Overall为六任务准确率的等权平均，0–1；不是2212张直接混算的成功率，也不是best-of-4。生成完图片尚未代表取得分数，必须完成GenEval评分。
@@ -126,39 +139,41 @@ bash scripts/four_tasks.sh task4 llamagen newfull01
 例如一台机器上已有4张获准使用的GPU，用同一份代码、模型记录和数据目录：
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 bash scripts/four_tasks.sh task4-generate janus1b newfull4 0 4 > /tmp/newfull4-0.log 2>&1 &
-CUDA_VISIBLE_DEVICES=1 bash scripts/four_tasks.sh task4-generate janus1b newfull4 1 4 > /tmp/newfull4-1.log 2>&1 &
-CUDA_VISIBLE_DEVICES=2 bash scripts/four_tasks.sh task4-generate janus1b newfull4 2 4 > /tmp/newfull4-2.log 2>&1 &
-CUDA_VISIBLE_DEVICES=3 bash scripts/four_tasks.sh task4-generate janus1b newfull4 3 4 > /tmp/newfull4-3.log 2>&1 &
+CUDA_VISIBLE_DEVICES=0 bash scripts/four_tasks.sh task4-generate janus1b newfull4 0 4 guard_only > /tmp/newfull4-0.log 2>&1 &
+CUDA_VISIBLE_DEVICES=1 bash scripts/four_tasks.sh task4-generate janus1b newfull4 1 4 guard_only > /tmp/newfull4-1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=2 bash scripts/four_tasks.sh task4-generate janus1b newfull4 2 4 guard_only > /tmp/newfull4-2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=3 bash scripts/four_tasks.sh task4-generate janus1b newfull4 3 4 guard_only > /tmp/newfull4-3.log 2>&1 &
 wait
 # 检查四份日志成功，再使用一张卡评分
-CUDA_VISIBLE_DEVICES=0 bash scripts/four_tasks.sh task4-score janus1b newfull4 4
+CUDA_VISIBLE_DEVICES=0 bash scripts/four_tasks.sh task4-score janus1b newfull4 4 guard_only
 ```
 
-LlamaGen将模型参数改为 `llamagen`。分片数量在开始后不能改变；缺片或配置不同将拒绝合并。建议按整个模型分给不同服务器，避免跨机器搬运单组分片、重建符号链接和混入不同版本。
+LlamaGen将模型参数改为 `llamagen`；其他版本替换最后一个参数。分片数量在开始后不能改变；缺片或配置不同将拒绝合并。建议按整个模型分给不同服务器，避免跨机器搬运单组分片和混入不同版本。
 
 ## Slurm服务器：提交式运行
 
-配置本机 `ACCOUNT/PARTITION/QOS/GPU_REQUEST/CPUS_PER_TASK/MEMORY/WALLTIME`，不要照搬其他学校的账户。任务1可先预留8小时时限；这不是预计耗时或排队时长。task4默认 `SHARDS=32`，`CONCURRENT` 为**每模型**并行生成任务数，每份一张GPU，两模型可同时排队。若每模型CONCURRENT=4，两模型生成最多同时8张卡；按授权资源调整。
+配置本机 `ACCOUNT/PARTITION/QOS/GPU_REQUEST/CPUS_PER_TASK/MEMORY/WALLTIME`。任务1可先预留8小时时限，这不是预计耗时或排队时长。task4默认 `SHARDS=32`，`CONCURRENT` 为每模型并行生成任务数，每份一张GPU。同一模型三个版本按“本版生成→本版评分→下一版生成”依赖串行；两个模型独立。因此默认不会把并发申请扩大三倍。若每模型CONCURRENT=4，两个模型生成最多同时8张卡；按授权资源调整。
 
 ```bash
 # task1：两个模型的性能，同时产出task2所需统计
 bash scripts/submit_four_tasks.sh --check-only task1 perf01
 bash scripts/submit_four_tasks.sh --submit task1 perf01
 
-# task3：三个模型，九对图片
-bash scripts/submit_four_tasks.sh --check-only task3 pairs01
-bash scripts/submit_four_tasks.sh --submit task3 pairs01
+# task3：三个模型，每模型30对、共180张
+bash scripts/submit_four_tasks.sh --check-only task3 pairs30_01
+bash scripts/submit_four_tasks.sh --submit task3 pairs30_01
 
-# task4：两个模型的完整分片生成，评分依赖各自所有分片成功
-bash scripts/submit_four_tasks.sh --check-only task4 newfull01
-bash scripts/submit_four_tasks.sh --submit task4 newfull01
+# task4：三版本×两模型，共6个生成数组和6个评分作业
+bash scripts/submit_four_tasks.sh --check-only task4 ablations01
+bash scripts/submit_four_tasks.sh --submit task4 ablations01
 ```
 
 如只接手一个模型，在末尾添加模型名，例如：
 
 ```bash
-bash scripts/submit_four_tasks.sh --submit task4 newfull01 janus1b
+bash scripts/submit_four_tasks.sh --submit task4 ablations01 janus1b
+# 或仅选择一个版本；分次提交请使用不同RUN_TAG
+ABLATIONS=guard_temperature bash scripts/submit_four_tasks.sh --submit task4 temperature01 janus1b
 ```
 
 task2仍使用 `bash scripts/four_tasks.sh task2 perf01` 在读取结果时执行。提交记录在数据目录logs；出错先查记录和日志，不盲目重跑提交脚本。依赖任务不会在生成失败时冒充完成。
@@ -166,8 +181,8 @@ task2仍使用 `bash scripts/four_tasks.sh task2 perf01` 在读取结果时执�
 ## 协作交回什么
 
 1. task1/2：两个 `profile_summary.json`；需要复核时附逐图JSON。
-2. task3：18张原图及对应JSON，保留MODEL/METHOD目录，避免同名覆盖。
-3. task4：两组 `.summary.json`、`.jsonl` 逐图评分和 `.coverage.json`；保存生成图片以便复核。
+2. task3：180张原图及对应JSON，保留MODEL/METHOD目录，避免同名覆盖。
+3. task4：六组 `.summary.json`、`.jsonl` 逐图评分和 `.coverage.json`；保存生成图片以便复核。
 4. 每台服务器的代码commit、实际 `model_revisions_v1.json`、环境freeze记录和GPU型号。
 
 task4 的 merged 图片目录使用符号链接引用 shards；交回图片时保留 shards，或打包时显式跟随链接，不能只复制链接而丢掉实际图片。

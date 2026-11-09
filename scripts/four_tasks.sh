@@ -27,16 +27,27 @@ task3)
     ;;
 task4|task4-generate|task4-score)
     if [ "$MODEL" = janus7b ]; then echo 'Task4 scores 1B and LlamaGen only' >&2; exit 2; fi
-    if [ "$TASK" != task4-score ]; then
-        "$PYTHON" -m unittest discover -s tests -p 'test_variant_*.py' -v
-        "$PYTHON" -u generate_variant_full.py --root "$REPO_ROOT" --data-root "$DATA_ROOT" \
-            --run "$DATA_ROOT/outputs/$RUN_TAG" --model "$MODEL" --shard-index "${4:-0}" --shards "${5:-1}"
-    fi
-    if [ "$TASK" != task4-generate ]; then
-        if [ "$TASK" = task4 ]; then SHARD_COUNT=1; else SHARD_COUNT="${4:-1}"; fi
-        "$GENEVAL_PYTHON" -u evaluate_variant_full.py --root "$REPO_ROOT" --data-root "$DATA_ROOT" \
-            --run "$DATA_ROOT/outputs/$RUN_TAG" --model "$MODEL" --shards "$SHARD_COUNT"
-    fi
+    INDEX=0; SHARD_COUNT=1
+    case "$TASK" in
+        task4) VERSION_ARG="${4:-all}" ;;
+        task4-generate) INDEX="${4:-0}"; SHARD_COUNT="${5:-1}"; VERSION_ARG="${6:-all}" ;;
+        task4-score) SHARD_COUNT="${4:-1}"; VERSION_ARG="${5:-all}" ;;
+    esac
+    if [ "$VERSION_ARG" = all ]; then VERSIONS=(guard_only guard_temperature guard_gap); else VERSIONS=("$VERSION_ARG"); fi
+    for VERSION in "${VERSIONS[@]}"; do
+        case "$VERSION" in guard_only|guard_temperature|guard_gap|combined) ;; *) echo 'Unknown ablation' >&2; exit 2 ;; esac
+    done
+    for VERSION in "${VERSIONS[@]}"; do
+        if [ "$TASK" != task4-score ]; then
+            "$PYTHON" -m unittest discover -s tests -p 'test_variant_*.py' -v
+            "$PYTHON" -u generate_variant_full.py --root "$REPO_ROOT" --data-root "$DATA_ROOT" \
+                --run "$DATA_ROOT/outputs/$RUN_TAG" --model "$MODEL" --shard-index "$INDEX" --shards "$SHARD_COUNT" --variant "$VERSION"
+        fi
+        if [ "$TASK" != task4-generate ]; then
+            "$GENEVAL_PYTHON" -u evaluate_variant_full.py --root "$REPO_ROOT" --data-root "$DATA_ROOT" \
+                --run "$DATA_ROOT/outputs/$RUN_TAG" --model "$MODEL" --shards "$SHARD_COUNT" --variant "$VERSION"
+        fi
+    done
     ;;
 *) echo 'Unknown task' >&2; exit 2 ;;
 esac

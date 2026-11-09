@@ -40,7 +40,7 @@ from inchworm_variant_backend import VariantBackend
 
 def run_controller(backend,state,length,method,config):
     if method=='inchworm_variant':
-        return generate_variant(VariantBackend(backend,config.temperature),state,length,config)
+        return generate_variant(VariantBackend(backend,config.temperature,config.proposal_mode),state,length,config)
     if method=='inchworm':
         return generate(backend,state,length,Config())
     raise ValueError('Unknown controller')

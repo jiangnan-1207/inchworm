@@ -1,10 +1,10 @@
 # Inchworm + Janus-Pro-7B / LlamaGen / GenEval
 
-**交给同学运行的四项任务：[从新服务器安装到逐项运行、查看结果](docs/FOUR_TASKS.md)。** 包含原方法1B/LlamaGen性能、100张平均回溯、九对定性图，以及新方法在两个模型上的完整GenEval分数。统一入口为 `scripts/four_tasks.sh`，可选Slurm入口为 `scripts/submit_four_tasks.sh`。
+**交给同学运行的四项任务：[从新服务器安装到逐项运行、查看结果](docs/FOUR_TASKS.md)。** 包含原方法1B/LlamaGen性能、100张平均回溯、每模型30对定性图（共180张），以及三个消融版本×两个模型的完整GenEval（六组共13272张）。统一入口为 `scripts/four_tasks.sh`，可选Slurm入口为 `scripts/submit_four_tasks.sh`。
 
 把 Inchworm 解码接到 Janus-Pro-7B，并对三种方法运行**完整 GenEval**。支持普通 Linux GPU 服务器，也支持 Slurm；不依赖某所学校的 VPN、账号或固定目录。
 
-追加任务入口：[Janus-Pro-1B / LlamaGen 延迟与显存、LlamaGen 100 张平均回溯、三模型九对定性图](docs/REQUESTED_EXPERIMENTS.md)。新增的 LlamaGen Inchworm 适配器尚待真实 GPU 检查，作业会先检查再继续生成。
+追加任务入口：[Janus-Pro-1B / LlamaGen 延迟与显存、LlamaGen 100 张平均回溯、三模型定性图](docs/REQUESTED_EXPERIMENTS.md)。LlamaGen Inchworm 的真实 GPU 兼容性需运行验证，作业会先检查再继续生成。
 
 独立新方法：[inchworm_variant：原路径保底＋自适应温度提议＋混合位置](docs/INCHWORM_VARIANT.md)。保留原方法及旧任务入口；新方法的 GPU 效果仍待实际验证。
 

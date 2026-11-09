@@ -6,7 +6,7 @@ from pathlib import Path
 import time
 
 from four_task_protocol import full_shard_ids, variant_method
-from inchworm_variant import VariantConfig
+from ablation_plan import VARIANTS, ablation_flags, variant_config
 from protocol import (PROMPT_SHA256,atomic_json,bind_run,commit_image,completed,
     load_prompts,paths,seed_for,sha,validate_outputs)
 
@@ -19,15 +19,16 @@ def main():
     p.add_argument('--model',choices=['janus1b','llamagen'],required=True)
     p.add_argument('--shard-index',type=int,default=0)
     p.add_argument('--shards',type=int,default=1)
+    p.add_argument('--variant',choices=VARIANTS,default='combined')
     a=p.parse_args()
-    method=variant_method(a.model)
+    method=variant_method(a.model,a.variant)
     ids=full_shard_ids(a.shard_index,a.shards)
     rows=load_prompts(a.root/'benchmarks/geneval/prompts/evaluation_metadata.jsonl')
-    config=VariantConfig(); config.validate()
-    spec={'scope':'full_shard','formal_complete_benchmark':False,'method':method,'model':a.model,
+    config=variant_config(a.variant)
+    spec={'scope':'full_shard','formal_complete_benchmark':False,'method':method,'model':a.model,'variant':a.variant,
         'shards':a.shards,'shard_index':a.shard_index,'prompt_ids':ids,'prompt_sha256':PROMPT_SHA256,
         'samples_per_prompt':4,'seed_rule':'42 + 4*original_prompt_id + sample_id',
-        'variant_config':asdict(config),'batch_size':1,'dtype':'bf16',
+        'variant_config':asdict(config),'ablation_flags':ablation_flags(a.variant),'batch_size':1,'dtype':'bf16',
         'resolution':384 if a.model=='janus1b' else 512,
         'cfg':5.0 if a.model=='janus1b' else 7.5,'base_temperature':1.0,
         'image_tokens':576 if a.model=='janus1b' else 1024,
