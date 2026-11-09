@@ -18,7 +18,7 @@ def main():
     p.add_argument('--run',type=Path,required=True)
     p.add_argument('--model',choices=['janus1b','llamagen'],required=True)
     p.add_argument('--shards',type=int,default=1)
-    p.add_argument('--variant',choices=VARIANTS,default='combined')
+    p.add_argument('--variant',choices=VARIANTS,required=True)
     a=p.parse_args()
     if not 1<=a.shards<=553: raise ValueError('Invalid shard count')
     method=variant_method(a.model,a.variant)

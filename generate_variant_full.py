@@ -19,7 +19,7 @@ def main():
     p.add_argument('--model',choices=['janus1b','llamagen'],required=True)
     p.add_argument('--shard-index',type=int,default=0)
     p.add_argument('--shards',type=int,default=1)
-    p.add_argument('--variant',choices=VARIANTS,default='combined')
+    p.add_argument('--variant',choices=VARIANTS,required=True)
     a=p.parse_args()
     method=variant_method(a.model,a.variant)
     ids=full_shard_ids(a.shard_index,a.shards)

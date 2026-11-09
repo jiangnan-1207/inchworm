@@ -40,6 +40,7 @@ task4|task4-generate|task4-score)
     for VERSION in "${VERSIONS[@]}"; do
         if [ "$TASK" != task4-score ]; then
             "$PYTHON" -m unittest discover -s tests -p 'test_variant_*.py' -v
+            "$PYTHON" -m unittest discover -s tests -p 'test_ablation_plan.py' -v
             "$PYTHON" -u generate_variant_full.py --root "$REPO_ROOT" --data-root "$DATA_ROOT" \
                 --run "$DATA_ROOT/outputs/$RUN_TAG" --model "$MODEL" --shard-index "$INDEX" --shards "$SHARD_COUNT" --variant "$VERSION"
         fi

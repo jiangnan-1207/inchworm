@@ -48,3 +48,11 @@ class FourTaskTests(unittest.TestCase):
             result=subprocess.run([sys.executable,ROOT/name,'--help'],text=True,capture_output=True)
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertIn('--shards',result.stdout)
+
+    def test_raw_scoring_and_generation_require_explicit_version(self):
+        for name in ['generate_variant_full.py','evaluate_variant_full.py']:
+            result=subprocess.run([sys.executable,ROOT/name,'--root',str(ROOT),
+                '--data-root',str(ROOT.parent/'data'),'--run',str(ROOT.parent/'no-run'),
+                '--model','janus1b'],text=True,capture_output=True)
+            self.assertEqual(result.returncode,2)
+            self.assertIn('--variant',result.stderr)
