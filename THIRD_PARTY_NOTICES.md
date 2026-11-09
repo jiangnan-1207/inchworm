@@ -10,6 +10,7 @@ license has yet been selected for newly written project code.
 | DeepSeek Janus, Copyright (c) 2023 DeepSeek | [source](https://github.com/deepseek-ai/Janus/tree/1daa72fa409002d40931bd7b36a9280362469ead) | [MIT](licenses/Janus.txt) |
 | LlamaGen, Copyright (c) 2024 FoundationVision | [source](https://github.com/FoundationVision/LlamaGen/tree/ce98ec41803a74a90ce68c40ababa9eaeffeb4ec) | [MIT](licenses/LlamaGen.txt) |
 | GenEval, Copyright (c) 2023 Dhruba Ghosh | [source](https://github.com/djghosh13/geneval/tree/af4902f24d3ca90ebbb446dd9891a59e0f82725f) | [MIT](licenses/GenEval.txt) |
+| ModelScope mPLUG, Copyright (c) Alibaba, Inc. and its affiliates | [preprocessor](https://github.com/modelscope/modelscope/blob/v1.9.5/modelscope/preprocessors/multi_modal.py) / [wrapper](https://github.com/modelscope/modelscope/blob/v1.9.5/modelscope/models/multi_modal/mplug_for_all_tasks.py) | [Apache-2.0](licenses/ModelScope.txt) |
 | MMDetection | [source and Apache-2.0 license](https://github.com/open-mmlab/mmdetection/tree/e9cae2d0787cd5c2fc6165a6061f92fa09e48fb1) | Remains in fetched source |
 
 The bootstrap script fetches separate upstream repositories including their

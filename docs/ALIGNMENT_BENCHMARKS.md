@@ -23,6 +23,8 @@ bash scripts/submit_alignment.sh --submit prepare align_20261109
 
 CPU作业4核/32G/2小时，固定下载官方数据/源码，建两个独立评分环境，下载mPLUG、Qwen、PaddleOCR；不会升级Janus、LlamaGen、GenEval、Lumina环境。需要已有JANUS_PYTHON/LLAMA_PYTHON指向正常生成环境，DATA_ROOT指向scratch。
 
+2026-11-09修复：Phoenix编译fairseq时出现math.h缺失。现在使用`mplug_direct.py`直接调用ModelScope v1.9.5的同一mPLUG模型，沿用官方MPlugPreprocessor的RGB/BICUBIC/归一化及25-token小写编码，和MPlugForAllTasks的首beam解码；不再导入通用pipeline中的OFA/fairseq/video模块。CPU准备阶段会真正加载权重并执行一次问答，成功出现MPLUG_DIRECT_CPU_INFERENCE_OK。旧版失败的准备任务可以保留环境和数据，更新代码后用新的准备标签重新提交；生成仍使用原计划标签。
+
 等待COMPLETED/0:0，日志同时出现ALIGNMENT_DATA_READY和ALIGNMENT_JUDGES_READY。它只是数据/导入准备完成，首次GPU评分仍须实际验证；依赖安装或下载失败请先看err，不要重复启动生成。
 
 ```bash

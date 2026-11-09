@@ -5,7 +5,6 @@ modelscope==1.9.5
 datasets==2.13.0
 pyarrow==14.0.2
 timm==0.9.12
-fairseq==0.12.2
 addict==2.4.0
 simplejson==3.19.3
 sortedcontainers==2.4.0

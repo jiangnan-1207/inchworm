@@ -44,7 +44,7 @@ def main():
     assets_path=a.root/f'benchmarks/setup_records/alignment_{a.benchmark}_judge.json'
     assets=json.loads(assets_path.read_text())
     judge_spec=dict(generator=spec,benchmark=a.benchmark,assets=assets,scoring_source={
-        f:sha(a.root/f) for f in ['score_alignment.py','alignment_metrics.py']},
+        f:sha(a.root/f) for f in ['score_alignment.py','alignment_metrics.py','mplug_direct.py']},
         dpg_first_question='included; upstream first-data-row skip corrected',
         tiif_protocol='Qwen2.5-VL-7B greedy, fixed prompt; PaddleOCR English/GNED; NOT GPT-4o or TIIF-Evaluator leaderboard')
     out=a.run/'scores'/a.model/a.benchmark; bind_run(out,judge_spec)
@@ -52,9 +52,8 @@ def main():
     if a.benchmark=='dpg':
         questions=dpg_questions(a.root/'benchmarks/ELLA/dpg_bench/dpg_bench.csv')
         if set(questions)!={r['key'] for r in rows}: raise ValueError('DPG prompt/question key mismatch')
-        from modelscope.pipelines import pipeline
-        from modelscope.utils.constant import Tasks
-        judge=pipeline(Tasks.visual_question_answering,model=assets['model_path'],device='gpu:0')
+        from mplug_direct import MPlugDirect
+        judge=MPlugDirect(assets['model_path'],device='cuda:0')
     else:
         judge=qwen_judge(assets['model_path'])
         from paddleocr import PaddleOCR

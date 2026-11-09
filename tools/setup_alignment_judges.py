@@ -44,10 +44,14 @@ def main():
         from modelscope import snapshot_download
         path=Path(snapshot_download('damo/mplug_visual-question-answering_coco_large_en',revision='v1.0.0',
             cache_dir=str(data/'modelscope_cache')))
-        from modelscope.pipelines import pipeline
-        from modelscope.utils.constant import Tasks
-        pipeline(Tasks.visual_question_answering,model=str(path),device='cpu')
-        assets=dict(model_path=str(path),repo='damo/mplug_visual-question-answering_coco_large_en',revision='v1.0.0')
+        from mplug_direct import MPlugDirect
+        from PIL import Image
+        judge=MPlugDirect(path,device='cpu')
+        probe=judge({'image':Image.new('RGB',(384,384)), 'question':'Is there a cat?'})
+        if not isinstance(probe.get('text'),str) or not probe['text'].strip(): raise ValueError('mPLUG CPU probe failed')
+        print('MPLUG_DIRECT_CPU_INFERENCE_OK',flush=True)
+        assets=dict(model_path=str(path),repo='damo/mplug_visual-question-answering_coco_large_en',revision='v1.0.0',
+            runtime='direct ModelScope mPLUG; official resize/normalize/tokenizer/top-beam decode; no OFA/fairseq')
     else:
         from huggingface_hub import snapshot_download
         from transformers import AutoProcessor,Qwen2_5_VLForConditionalGeneration

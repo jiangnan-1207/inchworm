@@ -20,7 +20,7 @@ jobs:
       - run: python -m pip install -r requirements/alignment-${{ matrix.judge }}.txt
       - run: python -m pip check
       - if: matrix.judge == 'dpg'
-        run: python -c "from modelscope.pipelines import pipeline; from modelscope.models.multi_modal.mplug import MPlug; print('MPLUG_CPU_IMPORT_OK')"
+        run: python -c "import importlib.util; from modelscope.models.multi_modal.mplug import MPlug, MPlugConfig; from mplug_direct import MPlugDirect; assert importlib.util.find_spec('fairseq') is None; print('MPLUG_CPU_IMPORT_WITHOUT_FAIRSEQ_OK')"
       - if: matrix.judge == 'tiif'
         run: python -c "from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor; from paddleocr import PaddleOCR; print('TIIF_CPU_IMPORT_OK')"
   alignment-datasets:
