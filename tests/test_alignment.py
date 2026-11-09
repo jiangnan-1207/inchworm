@@ -39,6 +39,14 @@ class AlignmentTests(unittest.TestCase):
         self.assertEqual(manifest['counts']['dpg'],4260)
         questions=dpg_questions(root/'benchmarks/ELLA/dpg_bench/dpg_bench.csv')
         self.assertEqual({r['key'] for r in manifest['rows'] if r['benchmark']=='dpg'},set(questions))
+        for group in questions.values():
+            self.assertEqual(dependency_score(group,{qid:'yes' for qid in group}),1)
+        import re
+        for row in manifest['rows']:
+            if row['benchmark']=='tiif':
+                self.assertTrue(all(s.strip().lower() in ['yes','no'] for s in row['answers']))
+                if row['kind']=='text':
+                    for q in row['questions']: self.assertIsNotNone(re.fullmatch(r"Is the text '(.*)' in the image\?",q.strip()))
         print('ALIGNMENT_DATA_COUNTS',manifest['counts'],flush=True)
 
 
