@@ -2,7 +2,7 @@ numpy==1.26.4
 Pillow==10.4.0
 transformers==4.38.2
 modelscope==1.9.5
-datasets==2.14.7
+datasets==2.13.0
 pyarrow==14.0.2
 timm==0.9.12
 fairseq==0.12.2

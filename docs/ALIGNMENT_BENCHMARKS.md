@@ -4,7 +4,7 @@
 
 DPG使用官方ELLA的全部1065提示词，每词4张，单组4260张、四组17040张。官方文件名同时有数字和字符串，不重新编号。逐图评分等价于官方2×2图的四个裁剪，保留问题依赖关系，先四图均值再跨提示词均值。修正上游CSV解析器跳过首条有效问题的错误；因此报告应注明 all-CSV-questions 修正，不能声称逐字执行未修正脚本。记录所有回答，异常直接失败，不跳过坏图汇总。
 
-TIIF使用固定官方仓库 `data/testmini_prompts` 及对应 `testmini_eval_prompts`，全部39维、全部短/长提示词，各一图。数量由源码实际枚举后写manifest，避免把不同版本的554/完整集混用。结果必须写 **TIIF testmini / Qwen2.5-VL-7B + PaddleOCR，local evaluation**，不是完整TIIF、不是GPT-4o、不是新TIIF-Evaluator榜单。Qwen固定greedy/SDPA/BF16、max_new_tokens=2048，固定提示词、不提供目标caption；图像处理min_pixels=256×28²，max_pixels=1280×28²。非文字维按官方yes/no问题评分；文字维用PaddleOCR英文模型和官方GNED函数，转换1-GNED。每维先汇总，再在官方9组间宏平均，分别报告short/long。格式不匹配即失败，不伪造no答案。7B仅作为成本可控的本地评分器，未经该基准可靠性校准；公平比较应同配置重测backbone。
+TIIF使用固定官方仓库 `data/testmini_prompts` 及对应 `testmini_eval_prompts`，全部39维、全部短/长提示词，各一图。已在真实固定源码上核验：277条短提示词＋277条长提示词，每组554张；四组2216张，两基准合计19256张。结果必须写 **TIIF testmini / Qwen2.5-VL-7B + PaddleOCR，local evaluation**，不是完整TIIF、不是GPT-4o、不是新TIIF-Evaluator榜单。Qwen固定greedy/SDPA/BF16、max_new_tokens=2048，固定提示词、不提供目标caption；图像处理min_pixels=256×28²，max_pixels=1280×28²。非文字维按官方yes/no问题评分；文字维用PaddleOCR英文模型和官方GNED函数，转换1-GNED。每维先汇总，再在官方9组间宏平均，分别报告short/long。格式不匹配即失败，不伪造no答案。7B仅作为成本可控的本地评分器，未经该基准可靠性校准；公平比较应同配置重测backbone。
 
 来源：[ELLA](https://github.com/TencentQQGYLab/ELLA)、[TIIF](https://github.com/A113N-W3I/TIIF-Bench)、[Qwen](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct)。源码/权重固定版本在configs/alignment_sources.json；Paddle模型文件记录SHA，ModelScope mPLUG使用v1.0.0。各自许可证由原仓库/模型页提供。
 
