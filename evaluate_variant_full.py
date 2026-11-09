@@ -7,7 +7,7 @@ import subprocess
 
 from four_task_protocol import variant_method
 from merge_full import merge
-from ablation_plan import VARIANTS,ablation_flags
+from ablation_plan import BENCHMARK_VERSIONS,ablation_flags
 from protocol import atomic_json
 
 
@@ -18,7 +18,7 @@ def main():
     p.add_argument('--run',type=Path,required=True)
     p.add_argument('--model',choices=['janus1b','llamagen'],required=True)
     p.add_argument('--shards',type=int,default=1)
-    p.add_argument('--variant',choices=VARIANTS,required=True)
+    p.add_argument('--variant',choices=BENCHMARK_VERSIONS,required=True)
     a=p.parse_args()
     if not 1<=a.shards<=553: raise ValueError('Invalid shard count')
     method=variant_method(a.model,a.variant)

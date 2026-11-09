@@ -76,13 +76,14 @@ QOS=""
             self.assertFalse((Path(folder)/'data/logs/dryrun.task4.submissions.txt').exists())
 
     def test_single_selected_version_does_not_submit_other_ablations(self):
-        with tempfile.TemporaryDirectory(dir=ROOT/'tests') as folder:
-            env=self.fixture(folder); env['ABLATIONS']='guard_temperature'
-            result=self.call(env,'--submit','task4','single','llamagen')
-            self.assertEqual(result.returncode,0,result.stderr)
-            rows=[json.loads(x) for x in Path(env['FAKE_SLURM_LOG']).read_text().splitlines()]
-            self.assertEqual(len(rows),2)
-            self.assertTrue(all(r['variant']=='guard_temperature' for r in rows))
+        for version in ['guard_temperature','original']:
+            with tempfile.TemporaryDirectory(dir=ROOT/'tests') as folder:
+                env=self.fixture(folder); env['ABLATIONS']=version
+                result=self.call(env,'--submit','task4','single','llamagen')
+                self.assertEqual(result.returncode,0,result.stderr)
+                rows=[json.loads(x) for x in Path(env['FAKE_SLURM_LOG']).read_text().splitlines()]
+                self.assertEqual(len(rows),2)
+                self.assertTrue(all(r['variant']==version for r in rows))
 
     def test_invalid_or_repeated_model_is_rejected_before_sbatch(self):
         with tempfile.TemporaryDirectory(dir=ROOT/'tests') as folder:

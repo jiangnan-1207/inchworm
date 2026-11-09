@@ -1,4 +1,4 @@
-"""Task 4: complete 553x4 GenEval generation for the new variant only."""
+"""Complete 553x4 GenEval generation for an explicit original/variant version."""
 import argparse
 from dataclasses import asdict
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 import time
 
 from four_task_protocol import full_shard_ids, variant_method
-from ablation_plan import VARIANTS, ablation_flags, variant_config
+from ablation_plan import BENCHMARK_VERSIONS, ablation_flags, benchmark_config, controller_method
 from protocol import (PROMPT_SHA256,atomic_json,bind_run,commit_image,completed,
     load_prompts,paths,seed_for,sha,validate_outputs)
 
@@ -19,16 +19,18 @@ def main():
     p.add_argument('--model',choices=['janus1b','llamagen'],required=True)
     p.add_argument('--shard-index',type=int,default=0)
     p.add_argument('--shards',type=int,default=1)
-    p.add_argument('--variant',choices=VARIANTS,required=True)
+    p.add_argument('--variant',choices=BENCHMARK_VERSIONS,required=True)
     a=p.parse_args()
     method=variant_method(a.model,a.variant)
     ids=full_shard_ids(a.shard_index,a.shards)
     rows=load_prompts(a.root/'benchmarks/geneval/prompts/evaluation_metadata.jsonl')
-    config=variant_config(a.variant)
+    config=benchmark_config(a.variant)
+    generation_method=controller_method(a.variant)
     spec={'scope':'full_shard','formal_complete_benchmark':False,'method':method,'model':a.model,'variant':a.variant,
         'shards':a.shards,'shard_index':a.shard_index,'prompt_ids':ids,'prompt_sha256':PROMPT_SHA256,
         'samples_per_prompt':4,'seed_rule':'42 + 4*original_prompt_id + sample_id',
-        'variant_config':asdict(config),'ablation_flags':ablation_flags(a.variant),'batch_size':1,'dtype':'bf16',
+        'variant_config':asdict(config),'controller_method':generation_method,
+        'ablation_flags':ablation_flags(a.variant),'batch_size':1,'dtype':'bf16',
         'resolution':384 if a.model=='janus1b' else 512,
         'cfg':5.0 if a.model=='janus1b' else 7.5,'base_temperature':1.0,
         'image_tokens':576 if a.model=='janus1b' else 1024,
@@ -46,8 +48,8 @@ def main():
     torch.backends.cudnn.allow_tf32=False
     torch.backends.cudnn.benchmark=False
     with torch.inference_mode():
-        run=load_model(a.model,a.root,a.data_root,config)
-        image,_,_=run(rows[ids[0]]['prompt'],'inchworm_variant'); del image
+        run=load_model(a.model,a.root,a.data_root) if a.variant=='original' else load_model(a.model,a.root,a.data_root,config)
+        image,_,_=run(rows[ids[0]]['prompt'],generation_method); del image
         for i in ids:
             for j in range(4):
                 image_path,receipt=paths(out,method,i,j)
@@ -57,7 +59,7 @@ def main():
                 torch.manual_seed(seed); torch.cuda.manual_seed_all(seed); np.random.seed(seed)
                 torch.cuda.synchronize(); torch.cuda.reset_peak_memory_stats()
                 start=time.perf_counter()
-                image,token_seconds,diag=run(rows[i]['prompt'],'inchworm_variant')
+                image,token_seconds,diag=run(rows[i]['prompt'],generation_method)
                 torch.cuda.synchronize(); seconds=time.perf_counter()-start
                 commit_image(out,method,i,j,rows[i],spec,image,{
                     'seed':seed,'generation_seconds':token_seconds,'latency_seconds':seconds,

@@ -35,7 +35,7 @@ task4|task4-generate|task4-score)
     esac
     if [ "$VERSION_ARG" = all ]; then VERSIONS=(guard_only guard_temperature guard_gap); else VERSIONS=("$VERSION_ARG"); fi
     for VERSION in "${VERSIONS[@]}"; do
-        case "$VERSION" in guard_only|guard_temperature|guard_gap|combined) ;; *) echo 'Unknown ablation' >&2; exit 2 ;; esac
+        case "$VERSION" in guard_only|guard_temperature|guard_gap|combined|original) ;; *) echo 'Unknown benchmark version' >&2; exit 2 ;; esac
     done
     for VERSION in "${VERSIONS[@]}"; do
         if [ "$TASK" != task4-score ]; then

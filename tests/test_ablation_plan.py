@@ -2,7 +2,7 @@ from dataclasses import asdict
 import unittest
 from types import SimpleNamespace
 
-from ablation_plan import DEFAULT_ABLATIONS, ablation_flags, variant_config
+from ablation_plan import DEFAULT_ABLATIONS, ablation_flags, benchmark_config, controller_method, variant_config
 from four_task_protocol import variant_method
 from inchworm_variant_backend import VariantBackend
 from inchworm_variant import generate, VariantConfig
@@ -35,6 +35,15 @@ class AblationTests(unittest.TestCase):
         self.assertEqual(ablation_flags('guard_only'),{'original_path_guard':True,
             'adaptive_temperature':False,'mixed_high_H_high_G':False})
         self.assertNotIn('combined',DEFAULT_ABLATIONS)
+
+    def test_original_benchmark_uses_original_controller_and_has_no_new_changes(self):
+        self.assertEqual(controller_method('original'),'inchworm')
+        self.assertEqual(asdict(benchmark_config('original')),asdict(Config()))
+        self.assertFalse(any(ablation_flags('original').values()))
+        self.assertEqual(variant_method('janus1b','original'),'janus1b_original_inchworm')
+        self.assertNotIn('original',DEFAULT_ABLATIONS)
+        for version in DEFAULT_ABLATIONS:
+            self.assertEqual(controller_method(version),'inchworm_variant')
 
     def test_topk_delegates_old_proposals_without_importing_torch(self):
         calls=[]

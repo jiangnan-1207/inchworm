@@ -31,7 +31,7 @@ fi
 if [ "${#VERSIONS[@]}" -eq 0 ]; then echo 'Select at least one ablation' >&2; exit 2; fi
 declare -A version_seen=()
 for version in "${VERSIONS[@]}"; do
-    case "$version" in guard_only|guard_temperature|guard_gap|combined|none) ;; *) echo 'Unknown ablation' >&2; exit 2 ;; esac
+    case "$version" in guard_only|guard_temperature|guard_gap|combined|original|none) ;; *) echo 'Unknown benchmark version' >&2; exit 2 ;; esac
     if [ "$FOUR_TASK" = task4 ] && [ "$version" = none ]; then exit 2; fi
     if [ -n "${version_seen[$version]:-}" ]; then echo 'Duplicate ablation' >&2; exit 2; fi
     version_seen[$version]=1

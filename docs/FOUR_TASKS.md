@@ -134,6 +134,18 @@ bash scripts/four_tasks.sh task4 janus1b combined01 combined
 
 必须满足 `prompts=553`、`images=2212`、`formal_complete_benchmark=true`，再读取 `overall` 与 `task_scores`。Overall为六任务准确率的等权平均，0–1；不是2212张直接混算的成功率，也不是best-of-4。生成完图片尚未代表取得分数，必须完成GenEval评分。
 
+## 追加：原Inchworm在Janus-Pro-1B上的完整分数
+
+与新方法三版分开，可显式选择 `original`，调用原Inchworm控制器，三个新改动都关闭，仍为553×4=2212张：
+
+```bash
+bash scripts/four_tasks.sh task4 janus1b original1b01 original
+# Slurm，先用 --check-only 检查，再提交
+ABLATIONS=original bash scripts/submit_four_tasks.sh --submit task4 original1b01 janus1b
+```
+
+结果文件为 `outputs/original1b01/merged/evaluation/janus1b_original_inchworm.summary.json`，与新方法六份结果独立。任务1依然是1B和LlamaGen的性能，任务3依然是三模型各30对；这项原方法分数不替代新方法三版评分。
+
 ## task4 多卡分片（普通服务器）
 
 例如一台机器上已有4张获准使用的GPU，用同一份代码、模型记录和数据目录：
