@@ -1,0 +1,8 @@
+{
+  "source_url": "https://github.com/Alpha-VLLM/Lumina-mGPT-2.0.git",
+  "source_revision": "0a54b9e0f1bf4ea3577e8a3b1b27b652fbc1e6cc",
+  "model_repo": "Alpha-VLLM/Lumina-mGPT-2.0",
+  "model_revision": "3d541ea5eceb13365be2412c8e363be2e2cc0bd7",
+  "vq_repo": "ai-forever/MoVQGAN",
+  "vq_revision": "6ad2b261ac95abb568212584ab0f62d478700458"
+}

@@ -16,3 +16,5 @@ The bootstrap script fetches separate upstream repositories including their
 license files; it does not vendor their full trees here. Model weights and
 other dependencies are downloaded separately and retain their own terms.
 Publication of this code does not publish the manuscript or model weights.
+
+The optional Lumina adapter calls [Alpha-VLLM/Lumina-mGPT-2.0](https://github.com/Alpha-VLLM/Lumina-mGPT-2.0/tree/0a54b9e0f1bf4ea3577e8a3b1b27b652fbc1e6cc), which is Apache-2.0 licensed. Its model/processor/decoder code and license remain in the separately fetched upstream checkout; the adapter does not vendor them. [MoVQGAN](https://huggingface.co/ai-forever/MoVQGAN) weights are downloaded separately with their upstream terms. The new persistent cache uses the public Hugging Face Cache interface; it is an independent implementation, not a modification of model weights.

@@ -20,3 +20,19 @@ jobs:
           python-version: '3.10'
       - run: python -m pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
       - run: python -m unittest discover -s tests -v
+  lumina-cache-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install torch==2.3.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install -r requirements/lumina.txt
+      - uses: actions/checkout@v4
+        with:
+          repository: Alpha-VLLM/Lumina-mGPT-2.0
+          ref: 0a54b9e0f1bf4ea3577e8a3b1b27b652fbc1e6cc
+          path: benchmarks/Lumina-mGPT-2.0
+      - run: PYTHONPATH=benchmarks/Lumina-mGPT-2.0/lumina_mgpt:benchmarks/Lumina-mGPT-2.0 python -c "from inference_solver import FlexARInferenceSolver; print('LUMINA_CPU_IMPORT_OK')"
+      - run: python -m unittest discover -s tests -p 'test_lumina*.py' -v

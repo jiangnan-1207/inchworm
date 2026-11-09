@@ -1,5 +1,7 @@
 # Inchworm + Janus-Pro-7B / LlamaGen / GenEval
 
+新增：[Lumina-mGPT 2.0部署与30对原生／原Inchworm图片](docs/LUMINA.md)。单独环境、768px、优先H200；不启用新方法三改动。GPU兼容性和效果仍需实际作业验证。
+
 **交给同学运行的四项任务：[从新服务器安装到逐项运行、查看结果](docs/FOUR_TASKS.md)。** 包含原方法1B/LlamaGen性能、100张平均回溯、每模型30对定性图（共180张），以及三个消融版本×两个模型的完整GenEval（六组共13272张）。统一入口为 `scripts/four_tasks.sh`，可选Slurm入口为 `scripts/submit_four_tasks.sh`。
 
 把 Inchworm 解码接到 Janus-Pro-7B，并对三种方法运行**完整 GenEval**。支持普通 Linux GPU 服务器，也支持 Slurm；不依赖某所学校的 VPN、账号或固定目录。
