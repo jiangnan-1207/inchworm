@@ -1,5 +1,7 @@
 # Inchworm + Janus-Pro-7B / LlamaGen / GenEval
 
+**交给同学运行的四项任务：[从新服务器安装到逐项运行、查看结果](docs/FOUR_TASKS.md)。** 包含原方法1B/LlamaGen性能、100张平均回溯、九对定性图，以及新方法在两个模型上的完整GenEval分数。统一入口为 `scripts/four_tasks.sh`，可选Slurm入口为 `scripts/submit_four_tasks.sh`。
+
 把 Inchworm 解码接到 Janus-Pro-7B，并对三种方法运行**完整 GenEval**。支持普通 Linux GPU 服务器，也支持 Slurm；不依赖某所学校的 VPN、账号或固定目录。
 
 追加任务入口：[Janus-Pro-1B / LlamaGen 延迟与显存、LlamaGen 100 张平均回溯、三模型九对定性图](docs/REQUESTED_EXPERIMENTS.md)。新增的 LlamaGen Inchworm 适配器尚待真实 GPU 检查，作业会先检查再继续生成。

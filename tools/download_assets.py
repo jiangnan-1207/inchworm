@@ -4,30 +4,32 @@ import os
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
-def download_janus():
+def download_janus(sizes=('7b',)):
     import json
     from huggingface_hub import snapshot_download
     root = Path(os.environ['BENCH_ROOT'])
     data = Path(os.environ['BENCH_SCRATCH'])
-    revision = '5c3eb3fb2a3b61094328465ba61fcd4272090d67'
+    pinned=json.loads((ROOT/'configs/model_revisions.json').read_text())
     record = root/'setup_records/model_revisions_v1.json'
     revisions = json.loads(record.read_text()) if record.exists() else {}
-    if revisions.get('deepseek-ai/Janus-Pro-7B', revision) != revision:
-        raise RuntimeError('Existing Janus revision differs')
-    revisions['deepseek-ai/Janus-Pro-7B'] = revision
-    record.write_text(json.dumps(revisions,indent=2)+'\n')
-    target = data/'models/Janus-Pro-7B'
-    snapshot_download('deepseek-ai/Janus-Pro-7B',revision=revision,local_dir=str(target),max_workers=2,
-        allow_patterns=['*.json','*.model','*.txt','*.bin','*.safetensors'])
-    indices = list(target.glob('*.index.json'))
-    if not indices:
-        raise RuntimeError('Missing Janus checkpoint weight index')
-    for index in indices:
-        for name in set(json.loads(index.read_text())['weight_map'].values()):
-            if not (target/name).is_file() or (target/name).stat().st_size == 0:
-                raise RuntimeError(f'Missing model shard: {name}')
-    from janus.models import VLChatProcessor
-    VLChatProcessor.from_pretrained(str(target),local_files_only=True)
+    for size in dict.fromkeys(sizes):
+        name='Janus-Pro-'+size.upper(); repo='deepseek-ai/'+name; revision=pinned[repo]
+        if revisions.get(repo,revision)!=revision:
+            raise RuntimeError(f'Existing {name} revision differs; inspect instead of overwriting')
+        revisions[repo]=revision
+        record.write_text(json.dumps(revisions,indent=2)+'\n')
+        target=data/'models'/name
+        snapshot_download(repo,revision=revision,local_dir=str(target),max_workers=2,
+            allow_patterns=['*.json','*.model','*.txt','*.bin','*.safetensors'])
+        if not list(target.glob('*.safetensors')) and not list(target.glob('*.bin')):
+            raise RuntimeError(f'Missing {name} weights')
+        for index in target.glob('*.index.json'):
+            for filename in set(json.loads(index.read_text())['weight_map'].values()):
+                if not (target/filename).is_file() or (target/filename).stat().st_size==0:
+                    raise RuntimeError(f'Missing model shard: {filename}')
+        from janus.models import VLChatProcessor
+        VLChatProcessor.from_pretrained(str(target),local_files_only=True)
+        print('JANUS_MODEL_ASSETS_OK',name,flush=True)
     print('JANUS_ASSETS_OK',flush=True)
 
 def download_llamagen():
@@ -39,9 +41,10 @@ def download_llamagen():
     record = root/'setup_records/model_revisions_v1.json'
     revisions = json.loads(record.read_text()) if record.exists() else {}
     api = HfApi()
+    pinned=json.loads((ROOT/'configs/model_revisions.json').read_text())
     for repo in ['peizesun/llamagen_t2i', 'google/flan-t5-xl']:
         if repo not in revisions:
-            revisions[repo] = api.model_info(repo).sha
+            revisions[repo] = pinned[repo]
             record.write_text(json.dumps(revisions, indent=2)+'\n')
     llama = scratch/'models/LlamaGen'
     for name in ['vq_ds16_t2i.pt', 't2i_XL_stage2_512.pt']:
@@ -118,13 +121,15 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--component',choices=['janus','llamagen','geneval'],required=True)
     parser.add_argument('--data-root',type=Path,required=True)
+    parser.add_argument('--janus-models',nargs='+',choices=['1b','7b'],default=['7b'])
     args=parser.parse_args()
     data=args.data_root.expanduser().resolve()
     (data/'models').mkdir(parents=True,exist_ok=True)
     (ROOT/'benchmarks/setup_records').mkdir(parents=True,exist_ok=True)
     os.environ['BENCH_ROOT']=str(ROOT/'benchmarks')
     os.environ['BENCH_SCRATCH']=str(data)
-    {'janus':download_janus,'llamagen':download_llamagen,'geneval':download_geneval}[args.component]()
+    if args.component=='janus': download_janus(args.janus_models)
+    else: {'llamagen':download_llamagen,'geneval':download_geneval}[args.component]()
 
 
 if __name__=='__main__':

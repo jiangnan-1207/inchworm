@@ -135,6 +135,7 @@ def main():
     p.add_argument('--data-root',type=Path,required=True)
     p.add_argument('--out',type=Path,required=True)
     p.add_argument('--model',choices=['janus1b','llamagen','janus7b'],required=True)
+    p.add_argument('--scope',choices=['profile','pairs','both'],default='both')
     args=p.parse_args()
     import torch
     import numpy as np
@@ -147,8 +148,11 @@ def main():
     group={'janus1b':0,'llamagen':1,'janus7b':2}[args.model]
     pairs=[(i,PAIR_PROMPTS[i]) for i in range(group*3,group*3+3)]
     out=args.out/args.model
-    specification={'model':args.model,'batch_size':1,'dtype':'bf16','config':asdict(Config()),
-        'profiling_prompt_ids':ids if args.model!='janus7b' else [],'pairs':pairs,
+    profiling=args.scope in ['profile','both'] and args.model!='janus7b'
+    qualitative=args.scope in ['pairs','both']
+    if not profiling and not qualitative: raise ValueError('This original task profiles only Janus1B and LlamaGen')
+    specification={'model':args.model,'scope':args.scope,'batch_size':1,'dtype':'bf16','config':asdict(Config()),
+        'profiling_prompt_ids':ids if profiling else [],'pairs':pairs if qualitative else [],
         'gpu':torch.cuda.get_device_name(0),'torch':torch.__version__,'cuda':torch.version.cuda,
         'source_sha256':{f.name:sha(f) for f in sorted(Path(__file__).parent.glob('*.py'))},
         'asset_revisions':json.loads((args.root/'benchmarks/setup_records/model_revisions_v1.json').read_text()),
@@ -173,9 +177,9 @@ def main():
             image,_=measure(PAIR_PROMPTS[group*3],method,0); del image
         records=[]
         cases=[]
-        if args.model!='janus7b':
+        if profiling:
             cases.extend(('profile',i,rows[i]['prompt'],42+4*i) for i in ids)
-        cases.extend(('pairs',i,text,10042+i) for i,text in pairs)
+        if qualitative: cases.extend(('pairs',i,text,10042+i) for i,text in pairs)
         for phase,i,text,seed in cases:
             # Alternate execution order to reduce a systematic first/second bias.
             methods=['backbone','inchworm'] if i%2==0 else ['inchworm','backbone']
@@ -194,10 +198,10 @@ def main():
                     atomic_json(path,record); del image
                 if phase=='profile': records.append(record)
                 print('SAMPLE_OK',args.model,phase,i,method,record['latency_seconds'],record['backtracks'],flush=True)
-    if args.model!='janus7b':
+    if profiling:
         summary=summarize(records,[(m,i) for m in ['backbone','inchworm'] for i in ids])
         atomic_json(out/'profile_summary.json',{'specification':specification,'results':summary})
-    atomic_json(out/'completed.json',{'profiling_images':len(records),'qualitative_images':6,'status':'completed'})
+    atomic_json(out/'completed.json',{'profiling_images':len(records),'qualitative_images':6 if qualitative else 0,'status':'completed'})
     print('REQUESTED_EXPERIMENTS_OK',args.model,flush=True)
 
 

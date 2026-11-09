@@ -46,6 +46,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--data-root',required=True,type=Path)
     p.add_argument('--components',nargs='+',choices=['janus','llamagen','geneval'],default=['janus','geneval','llamagen'])
+    p.add_argument('--janus-models',nargs='+',choices=['1b','7b'],default=['7b'])
     p.add_argument('--skip-downloads',action='store_true')
     p.add_argument('--plan',action='store_true')
     a=p.parse_args()
@@ -54,7 +55,7 @@ def main():
         raise ValueError('Put model/env/output data outside the source repository')
     if a.plan:
         print(json.dumps({'repo':str(ROOT),'data_root':str(data),'components':a.components,
-                          'sources':REPOSITORIES,'downloads':not a.skip_downloads},indent=2))
+                          'janus_models':a.janus_models,'sources':REPOSITORIES,'downloads':not a.skip_downloads},indent=2))
         return
     if sys.platform!='linux' or sys.version_info[:2]!=(3,10):
         raise RuntimeError('Use Python 3.10 on Linux for this pinned CUDA environment recipe')
@@ -98,7 +99,9 @@ def main():
         with (ROOT/f'benchmarks/setup_records/{component}.freeze.txt').open('w') as out:
             run([python,'-m','pip','freeze'],scoped,out)
         if not a.skip_downloads:
-            run([python,ROOT/'tools/download_assets.py','--component',component,'--data-root',data],scoped)
+            download=[python,ROOT/'tools/download_assets.py','--component',component,'--data-root',data]
+            if component=='janus': download+=['--janus-models',*a.janus_models]
+            run(download,scoped)
         print('COMPONENT_SETUP_OK',component,flush=True)
     print('BOOTSTRAP_COMPLETE: GPU generation/evaluation still require actual execution',flush=True)
 
