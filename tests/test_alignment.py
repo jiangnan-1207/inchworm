@@ -20,6 +20,11 @@ class AlignmentTests(unittest.TestCase):
             path.write_text('item_id,proposition_id,dependency,tuple,question_natural_language\na,1,0,entity,Is it there?\na,2,1,color,Is it red?\n')
             self.assertEqual(set(dpg_questions(path)['a']),{1,2})
 
+    def test_cyclic_dependencies_follow_official_single_pass(self):
+        q={1:dict(dependencies=[2]),2:dict(dependencies=[1])}
+        self.assertEqual(dependency_score(q,{1:'yes',2:'yes'}),1)
+        self.assertEqual(dependency_score(q,{1:'yes',2:'no'}),0)
+
     def test_judge_format_is_strict(self):
         self.assertEqual(parse_answers('yes, visible\nno, missing',2),['yes','no'])
         with self.assertRaises(ValueError): parse_answers('yes',2)

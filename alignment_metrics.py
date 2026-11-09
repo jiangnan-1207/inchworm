@@ -30,14 +30,12 @@ def dpg_questions(path):
 
 def dependency_score(questions,answers):
     if set(questions)!=set(answers): raise ValueError('Missing DPG answers')
-    scores={}; active=set()
-    def score(qid):
-        if qid in scores: return scores[qid]
-        if qid in active: raise ValueError('DPG dependency cycle')
-        active.add(qid)
-        scores[qid]=float(answers[qid]=='yes' and all(score(x) for x in questions[qid]['dependencies'] if x))
-        active.remove(qid); return scores[qid]
-    return sum(score(qid) for qid in questions)/len(questions)
+    # Follow upstream's single pass in CSV order. The actual CSV contains cycles;
+    # recursive DAG propagation would change its protocol or reject valid items.
+    scores={qid:float(answer=='yes') for qid,answer in answers.items()}
+    for qid,item in questions.items():
+        if any(scores[parent]==0 for parent in item['dependencies'] if parent): scores[qid]=0
+    return sum(scores.values())/len(scores)
 
 
 def parse_answers(text,count):
