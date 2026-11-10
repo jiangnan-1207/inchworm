@@ -21,3 +21,11 @@
 使用新checkout和已有local.sh，导出REPO_ROOT、LLAMA_SOURCE_ROOT，然后以cpu-small/2CPU/8G/30分钟提交该worker。日志末尾应是 `LLAMAGEN_ASSET_HASHES_AND_SOURCE_OK`；结果在 `$DATA_ROOT/outputs/llamagen_asset_audit_<JOBID>.json`。通过仅代表文件与固定来源一致，不代表质量问题修好了。
 
 后续依据报告处理：有hash/size/missing失败时，在独立目录重新获取对应固定文件并复验，不覆盖正在使用的共享权重；全部通过时，进一步查文本特征、加载完整性和数值后端，使用同一组简单提示词做受控对照，不能靠挑选种子或直接调整Inchworm掩盖基础链路问题。原版适配器的概率一致性失败仍需单独修复，禁止单纯放宽阈值。
+
+## 文件校验通过后的单GPU运行对照
+
+用户的15428523已通过全部文件及源码校验，不应重复下载同一权重。`scripts/llama_runtime_probe_worker.sh` 复用现有环境/权重，要求 `LLAMA_ASSET_REPORT` 指向该报告。执行 `tools/diagnose_llamagen_runtime.py`，在一个GPU作业内完成三组对照：默认T5 BF16＋GPT BF16；T5 FP32特征转BF16＋GPT BF16；T5/GPT全FP32。禁用TF32，不改CFG7.5/top-k1000/温度1、512分辨率或提示词；每组重设seed42。FP32均从原始磁盘权重重新加载，避免仅上转换BF16后冒充完整精度。
+
+同时保存T5加载缺失/不匹配键、有效文本特征统计、提示词特征相似度，以及默认/slow tokenizer的实际token IDs；仅在这三条提示词的IDs/masks不同的情况下，额外生成slow-tokenizer BF16对照。该比较不能证明所有文本的tokenizer行为相同。默认三组共9张，必要时12张；VQ逐张解码以控制峰值显存。种子重设时点、TF32设定和VQ解码批次与旧demo有差异，不要求逐像素复现旧图；用于当前对照内部定位问题，不作性能或质量benchmark。
+
+输出 `$DATA_ROOT/outputs/llamagen_runtime_<JOBID>/runtime_report.json` 及各case的 `grid.png`、00.png（bench）、01.png（apple）、02.png（dog）和图像tokens。结束标记 `LLAMAGEN_RUNTIME_PROBE_OK` 只表示运行结束，图片仍需核对。若高精度组恢复提示词对应关系，则再缩小差异、落实统一配置并重新验证适配器；若全部异常，继续核对实际加载与文本条件响应，不能以脚本成功作为修复成功。
