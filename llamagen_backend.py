@@ -120,8 +120,14 @@ reduction shapes, so compare numerically, not by assuming bitwise identity.
     for t in range(length):
         position=torch.arange(text,device=cond.device) if t==0 else torch.tensor([text+t-1],device=cond.device)
         x=None if t==0 else torch.tensor([[tokens[-1]],[tokens[-1]]],device=cond.device)
-        with torch.backends.cuda.sdp_kernel(enable_flash=False,enable_mem_efficient=False,enable_math=True):
-            logits,_=model(x,combined if t==0 else None,position)
+        # Native generate.prefill uses the default backend. Only image-token
+        # decode_n_tokens forces math SDPA. Comparing a math-only reference
+        # prefill to the default adapter prefill was a false source of error.
+        if t==0:
+            logits,_=model(x,combined,position)
+        else:
+            with torch.backends.cuda.sdp_kernel(enable_flash=False,enable_mem_efficient=False,enable_math=True):
+                logits,_=model(x,None,position)
         guided=logits[1:2,-1,:]+7.5*(logits[0:1,-1,:]-logits[1:2,-1,:])
         p=logits_to_probs(guided,temperature=1.0,top_k=1000,top_p=1.0)
         expected.append(p.clone()); tokens.append(int(p.argmax().item()))

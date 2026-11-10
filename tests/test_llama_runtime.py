@@ -9,6 +9,15 @@ runtime=importlib.util.module_from_spec(spec); spec.loader.exec_module(runtime)
 
 @unittest.skipUnless(importlib.util.find_spec('torch'),'Requires PyTorch')
 class RuntimeProbeTests(unittest.TestCase):
+    def test_teacher_forced_alignment_starts_at_last_text_position(self):
+        import torch
+        structure_spec=importlib.util.spec_from_file_location('llama_structure',ROOT/'tools/check_llamagen_structure.py')
+        structure=importlib.util.module_from_spec(structure_spec); structure_spec.loader.exec_module(structure)
+        logits=torch.arange(6).reshape(1,6,1)
+        selected=structure.image_prediction_logits(logits,text_length=3,image_length=4)
+        self.assertEqual(selected.flatten().tolist(),[2,3,4,5])
+        with self.assertRaises(ValueError): structure.image_prediction_logits(logits,3,5)
+
     def test_official_left_padding_keeps_valid_token_order(self):
         import torch
         features=torch.arange(2*5*3).reshape(2,5,3).float()

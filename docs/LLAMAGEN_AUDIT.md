@@ -29,3 +29,15 @@
 同时保存T5加载缺失/不匹配键、有效文本特征统计、提示词特征相似度，以及默认/slow tokenizer的实际token IDs；仅在这三条提示词的IDs/masks不同的情况下，额外生成slow-tokenizer BF16对照。该比较不能证明所有文本的tokenizer行为相同。默认三组共9张，必要时12张；VQ逐张解码以控制峰值显存。种子重设时点、TF32设定和VQ解码批次与旧demo有差异，不要求逐像素复现旧图；用于当前对照内部定位问题，不作性能或质量benchmark。
 
 输出 `$DATA_ROOT/outputs/llamagen_runtime_<JOBID>/runtime_report.json` 及各case的 `grid.png`、00.png（bench）、01.png（apple）、02.png（dog）和图像tokens。结束标记 `LLAMAGEN_RUNTIME_PROBE_OK` 只表示运行结束，图片仍需核对。若高精度组恢复提示词对应关系，则再缩小差异、落实统一配置并重新验证适配器；若全部异常，继续核对实际加载与文本条件响应，不能以脚本成功作为修复成功。
+
+## 三种精度都失败后的代码审计
+
+用户报告15428919的所有precision case仍偏离提示词。已逐段对照官方sample、generate、GPT、训练数据集/训练脚本及T5提取器：当前GPT-XL/t2i、caption_dim2048、120条件token、512/16=32网格、1024图像token、CFG顺序/公式、左padding和VQ码本配置与官方路径一致。输入和权重文件一致不等于语义质量已经验证。当前stage2_512尚未建立与其他报告的checkpoint对应关系，不同checkpoint不能直接对比分数，也不能承诺换成stage1就修好。
+
+找到一个**独立的适配器检查错误**：`check_native_prefixes` 曾将prefill也强制到math SDPA，实际原生generate的prefill使用默认后端，仅decode强制math。现已对齐这个调用策略，保持TV阈值0.01；回归测试用会因kernel策略产生不同分布的后端证明旧实现会误拒绝。此修改不改Inchworm算法，也不能解释不经过该检查的原生生成图片为何异常。
+
+另一个**上游模型行为**：固定GPT源码的 `precompute_freqs_cis_2d` 文本前缀填入全零的cos/sin对，`apply_rotary_emb` 因而把文本Q/K置零；V及残差路径仍有文本内容，不能说模型完全没有文本条件。该实现与训练路径共用，上游[issue54](https://github.com/FoundationVision/LlamaGen/issues/54)有讨论，但不是已证实的本次图片错误根因。不能直接用单位旋转或普通RoPE替换后仍声称保持原预训练backbone。[issue41](https://github.com/FoundationVision/LlamaGen/issues/41)也报告512原生推理复现困难，目前该讨论没有给出已验证解决方案。
+
+新增 `scripts/llama_structure_worker.sh`：复用通过hash校验的资产、同一环境与512配置，读取已有Janus红苹果图片作为参考，不再随机生成三组图。先用LlamaGen VQ做encode/decode和decode_code的重建对照，保存 `vq_roundtrip.png`；再在同一图像token前缀下测不同文本的概率响应与teacher-forced NLL，并用FP32比较原生KV缓存和完整前缀计算的概率。最后分别记录已修正adapter gate的FP32/BF16结果。保持原RoPE及预训练参数，未修改后端阈值。
+
+设置 `LLAMA_REFERENCE_IMAGE` 可指定参考图片，默认 `$DATA_ROOT/outputs/janus_test/apple_seed42.png`。结果在 `$DATA_ROOT/outputs/llamagen_structure_<JOBID>/structure_report.json`。`LLAMAGEN_STRUCTURE_DIAGNOSTIC_COMPLETED` 仅表示各诊断已执行；其中adapter_gate可明确为failed，不得把脚本完成误认为适配器通过。单张参考图的NLL排序也不能作为正式质量通过标准。该报告用于把VQ重建、原生cache、文本条件响应、adapter四条链路区分定位。
