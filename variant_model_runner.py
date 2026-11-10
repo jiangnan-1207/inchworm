@@ -10,7 +10,15 @@ from inchworm_variant import VariantConfig, generate as generate_variant
 from inchworm_variant_backend import VariantBackend
 
 
-def run_controller(backend,state,length,method,config):
+def run_controller(backend,state,length,method,config,collect_token_metrics=False,prefill_length=None):
+    if collect_token_metrics:
+        if method!='inchworm': raise ValueError('Token accounting is for original Inchworm only')
+        from token_accounting import MeteredBackend,original_metrics,backbone_reference
+        meter=MeteredBackend(backend,prefill_length)
+        result=generate(meter,state,length,Config())
+        result['token_metrics']={'inchworm':original_metrics(result,meter),
+            'backbone_reference':backbone_reference(length,prefill_length)}
+        return result
     if method=='inchworm_variant':
         return generate_variant(VariantBackend(backend,config.temperature,config.proposal_mode),state,length,config)
     if method=='inchworm':
@@ -23,10 +31,11 @@ def diagnostics(method,backtracks,result):
         return {'backtracks':0,'checks':0,'accepted_edits':0,'kept_original':0,'events':[]}
     return {'backtracks':backtracks,'checks':result.get('checks',backtracks),
         'accepted_edits':result.get('accepted_edits',backtracks),
-        'kept_original':result.get('kept_original',0),'events':result['events']}
+        'kept_original':result.get('kept_original',0),'events':result['events'],
+        **({'token_metrics':result['token_metrics']} if 'token_metrics' in result else {})}
 
 
-def load_model(name,root,data,variant_config=VariantConfig()):
+def load_model(name,root,data,variant_config=VariantConfig(),collect_token_metrics=False):
     import torch
     import numpy as np
     from PIL import Image
@@ -52,7 +61,8 @@ def load_model(name,root,data,variant_config=VariantConfig()):
             torch.cuda.synchronize()
             start=time.perf_counter()
             if method in ['inchworm','inchworm_variant']:
-                result=run_controller(JanusBackend(model),State(prompt_inputs=inputs),576,method,variant_config)
+                result=run_controller(JanusBackend(model),State(prompt_inputs=inputs),576,method,variant_config,
+                    collect_token_metrics=collect_token_metrics,prefill_length=inputs.shape[1])
                 tokens=result['tokens']; backtracks=result['backtracks']
             else:
                 cache=None; tokens=[]
@@ -124,7 +134,8 @@ def load_model(name,root,data,variant_config=VariantConfig()):
         if method in ['inchworm','inchworm_variant']:
             backend=LlamaGenBackend(model,cond,masks)
             try:
-                result=run_controller(backend,State(),1024,method,variant_config)
+                result=run_controller(backend,State(),1024,method,variant_config,
+                    collect_token_metrics=collect_token_metrics,prefill_length=cond.shape[1])
                 tokens=torch.tensor([result['tokens']],device='cuda',dtype=torch.int)
                 backtracks=result['backtracks']
             finally:
