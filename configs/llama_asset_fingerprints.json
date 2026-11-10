@@ -1,0 +1,98 @@
+{
+  "metadata_source": "Hugging Face model API with blobs=true at pinned revisions",
+  "models": [
+    {
+      "repo": "peizesun/llamagen_t2i",
+      "revision": "276f5c5a3d915b922899a03f1912605531574747",
+      "subdir": "",
+      "files": [
+        {
+          "name": "t2i_XL_stage2_512.pt",
+          "git_blob_sha1": "76184068aa3e20ebdcfcbae4d3bcb4583185289d",
+          "sha256": "7d02d368751c21b61dc3914b0ccba70fc913dafc063dd5b16bc9abf7091f8be1",
+          "size": 3111800170
+        },
+        {
+          "name": "vq_ds16_t2i.pt",
+          "git_blob_sha1": "41cd10c4636fb4c90906b1871f5a77b829e79161",
+          "sha256": "0e21fc1318e2e9ee641a07bdad0e20675e9ec35e6e3eb911d58b5d7a2cd8d4cb",
+          "size": 287920306
+        }
+      ]
+    },
+    {
+      "repo": "google/flan-t5-xl",
+      "revision": "7d6315df2c2fb742f0f5b556879d730926ca9001",
+      "subdir": "t5-ckpt/flan-t5-xl",
+      "files": [
+        {
+          "name": "config.json",
+          "git_blob_sha1": "9667ceb672e29cf6384d6c7de1bedc87001963dc",
+          "sha256": null,
+          "size": 1438
+        },
+        {
+          "name": "model-00001-of-00002.safetensors",
+          "git_blob_sha1": "4684cb75c0a6589da24221f08e17a3f77799ee67",
+          "sha256": "99196ddfbe886e8ef860f52de979df64890edfc792c3d94ce0502991f347dd18",
+          "size": 9449619912
+        },
+        {
+          "name": "model-00002-of-00002.safetensors",
+          "git_blob_sha1": "1d796ba57582f49f1b4cfdd3931fa77480dadb50",
+          "sha256": "c0c677ddeb21009b6efd97146f37fc3a0396707fb5e63ade7aff64884dce9806",
+          "size": 1949477672
+        },
+        {
+          "name": "model.safetensors.index.json",
+          "git_blob_sha1": "57fe4c8322237968f5622f0fd0eb915f964cb25e",
+          "sha256": null,
+          "size": 53032
+        },
+        {
+          "name": "pytorch_model-00001-of-00002.bin",
+          "git_blob_sha1": "b3fd7e2467489c351d8b463c66dd0419b5abc00f",
+          "sha256": "c43a96461e48c0218de822525f8ecd12a8318ed01364cb1ca595e9a238fa49d2",
+          "size": 9449717937
+        },
+        {
+          "name": "pytorch_model-00002-of-00002.bin",
+          "git_blob_sha1": "4986f8fa1cadbe48eaba69de11dbf03dac33cdcb",
+          "sha256": "60d971db8f7f7c6ccd566267e27ba7915d77dded5b3d755fedbb74ba157c5eb1",
+          "size": 1949494999
+        },
+        {
+          "name": "pytorch_model.bin.index.json",
+          "git_blob_sha1": "300f6ebb85d6e437aa0c73c7b96ad3f76a7c1d8c",
+          "sha256": null,
+          "size": 50781
+        },
+        {
+          "name": "special_tokens_map.json",
+          "git_blob_sha1": "2c19eb6e3b583f52d34b903b5978d3d30b6b7682",
+          "sha256": null,
+          "size": 2201
+        },
+        {
+          "name": "spiece.model",
+          "git_blob_sha1": "317a5ccbde45300f5d1d970d4d449af2108b147e",
+          "sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+          "size": 791656
+        },
+        {
+          "name": "tokenizer.json",
+          "git_blob_sha1": "fc669fbad1a6a82119ca3e1fa75db33ee22ca47d",
+          "sha256": null,
+          "size": 2424064
+        },
+        {
+          "name": "tokenizer_config.json",
+          "git_blob_sha1": "4dab1f6ac3880a9c9da08cf46464664e7e754542",
+          "sha256": null,
+          "size": 2539
+        }
+      ]
+    }
+  ],
+  "schema": 1
+}
