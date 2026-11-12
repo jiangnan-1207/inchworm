@@ -41,3 +41,9 @@
 新增 `scripts/llama_structure_worker.sh`：复用通过hash校验的资产、同一环境与512配置，读取已有Janus红苹果图片作为参考，不再随机生成三组图。先用LlamaGen VQ做encode/decode和decode_code的重建对照，保存 `vq_roundtrip.png`；再在同一图像token前缀下测不同文本的概率响应与teacher-forced NLL，并用FP32比较原生KV缓存和完整前缀计算的概率。最后分别记录已修正adapter gate的FP32/BF16结果。保持原RoPE及预训练参数，未修改后端阈值。
 
 设置 `LLAMA_REFERENCE_IMAGE` 可指定参考图片，默认 `$DATA_ROOT/outputs/janus_test/apple_seed42.png`。结果在 `$DATA_ROOT/outputs/llamagen_structure_<JOBID>/structure_report.json`。`LLAMAGEN_STRUCTURE_DIAGNOSTIC_COMPLETED` 仅表示各诊断已执行；其中adapter_gate可明确为failed，不得把脚本完成误认为适配器通过。单张参考图的NLL排序也不能作为正式质量通过标准。该报告用于把VQ重建、原生cache、文本条件响应、adapter四条链路区分定位。
+
+## Scratch文件数配额超限时的小规模诊断
+
+若写日志出现 `Disk quota exceeded`，先检查容量配额和文件数配额。GPU作业在1秒内以0:53退出且没有日志，可能尚未进入Python。释放少量字节不能解决inode限额，仅把Slurm日志换位置也不能解决报告/临时缓存写入失败。
+
+本worker支持 `LLAMA_DIAGNOSTIC_ROOT=/another/shared/path`：诊断报告、重建图、TMPDIR及HF/Torch/CUDA/Inductor/Triton缓存都写到该路径；DATA_ROOT仍指向原权重、环境所在目录。提交前在登录节点创建该目录及logs并验证文件可创建，同时将sbatch的output/error指向新目录logs。仅用于少量诊断输出，不能直接将全部benchmark图片或模型权重迁移到共享project。common.sh仍会确保原scratch的tmp/logs目录存在，因此这两个旧目录需保留；已存在时不会往里新建文件。模型与源码不改，也不删除旧实验数据。完整实验继续前仍需处理scratch文件数配额。
