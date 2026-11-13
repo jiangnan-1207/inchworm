@@ -45,13 +45,13 @@ class PrefixCacheTests(unittest.TestCase):
                 with self.subTest(dtype=dtype),torch.inference_mode():
                     torch.manual_seed(42)
                     model=Transformer(ModelArgs(dim=32,n_layer=2,n_head=4,multiple_of=16,
-                        caption_dim=8,cls_token_num=3,block_size=16,vocab_size=32,model_type='t2i'))
+                        caption_dim=8,cls_token_num=120,block_size=16,vocab_size=32,model_type='t2i'))
                     # Native initialization zeros the head; a nonzero head is
                     # essential to catch cache/attention errors in this test.
                     torch.nn.init.normal_(model.output.weight,std=0.1)
                     model=model.to(dtype=dtype).eval()
-                    cond=torch.randn(1,3,8,dtype=dtype)
-                    masks=torch.tensor([[0,1,1]])
+                    cond=torch.randn(1,120,8,dtype=dtype)
+                    masks=torch.tensor([[0]*117+[1,1,1]])
                     check_native_prefixes(model,cond,masks,length=10)
                     self.assertTrue(all(layer.attention.kv_cache is None for layer in model.layers))
 
