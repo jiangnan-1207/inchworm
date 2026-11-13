@@ -72,8 +72,9 @@ def main():
         torch.testing.assert_close(candidate,reference,atol=3e-4,rtol=3e-4)
         print('COLOR_HELPER_LIST_TEMPLATE_FORMULA_CHECK_OK',flush=True)
         from PIL import Image
-        scratch.joinpath('tmp').mkdir(parents=True,exist_ok=True)
-        apple = scratch/f'tmp/geneval_cuda_preflight_{os.getpid()}.png'
+        work_tmp = Path(os.environ.get('TMPDIR',str(scratch/'tmp')))
+        work_tmp.mkdir(parents=True,exist_ok=True)
+        apple = work_tmp/f'geneval_cuda_preflight_{os.getpid()}.png'
         Image.new('RGB',(256,256),(220,30,30)).save(apple)
         # Synthetic input exercises GPU code; it is never a benchmark sample.
         module.evaluate_image(str(apple),{'tag':'single_object','prompt':'a photo of an apple',

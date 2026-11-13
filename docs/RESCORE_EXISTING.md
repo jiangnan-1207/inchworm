@@ -1,0 +1,9 @@
+# 已完成消融分片的只评分恢复
+
+当所有生成分片成功、评分因scratch inode配额而在symlink创建阶段失败时，保留所有源图片和收据。`evaluate_variant_full.py --evaluation-root /writable/merged` 会重新验证全部553×4覆盖、收据和跨分片配置，然后只在新目录建立553个prompt目录软链接并写coverage、逐图评分及summary。图像不复制、不重新生成；已有不完整旧merged目录保留。
+
+`scripts/rescore_existing_variant_worker.sh` 读取当前checkout的评分恢复代码，`ASSETS_ROOT` 指向旧checkout的geneval/mmdetection源码，`EXISTING_RUN` 指向旧scratch分片目录，`RESCORE_ROOT` 指向仍可写的共享project小结果目录。复用原GENEVAL_PYTHON、DATA_ROOT及原有检测器/CLIP权重；不升级环境、不更改评分阈值。临时文件及通用缓存写RESCORE_ROOT，CLIP读取原已下载的DATA_ROOT/models/GenEval/clip_cache；缺失权重应报错后查明，不能在满配额scratch重新下载。
+
+用与旧任务相同模型/variant/shards配置重评分。默认RESCORE_MODEL=janus1b、RESCORE_VARIANT=guard_only、RESCORE_SHARDS=32。Slurm日志也必须写RESCORE_ROOT/logs，提交前创建并实际验证可写。这个入口没有提交生成任务、没有解除原依赖链，也没有取消其他任务。其余两版生成仍需先解决scratch配额后再恢复依赖；不能因第一版重评分成功就直接让它们往不可写的目录生成。
+
+结果：RESCORE_ROOT/merged/evaluation/janus1b_guard_only.summary.json。完整性仍强制prompts553、images2212、formal_complete_benchmark=true；合并链接写入位置改变不会使子集变成完整分数。只有最终评分成功标记TASK4_FULL_GENEVAL_OK才表示本组得分产出。

@@ -5,7 +5,7 @@ from pathlib import Path
 from protocol import METHODS, atomic_json, load_prompts, validate_outputs
 
 
-def merge(root,run,method,shards):
+def merge(root,run,method,shards,destination=None):
     rows=load_prompts(Path(root)/'benchmarks/geneval/prompts/evaluation_metadata.jsonl')
     run=Path(run)
     seen=set()
@@ -29,7 +29,8 @@ def merge(root,run,method,shards):
         sources.extend((i,directory/method/f'{i:05d}') for i in ids)
     if seen!=set(range(553)):
         raise ValueError('All 553 prompts are required')
-    merged=run/'merged'/method
+    merged_root=Path(destination) if destination is not None else run/'merged'
+    merged=merged_root/method
     merged.mkdir(parents=True,exist_ok=True)
     for i,source in sources:
         target=merged/f'{i:05d}'
@@ -40,8 +41,8 @@ def merge(root,run,method,shards):
             raise ValueError('Refusing to replace an existing directory')
         else:
             target.symlink_to(source.resolve(),target_is_directory=True)
-    count=validate_outputs(run/'merged',method,rows,list(range(553)),4)
-    atomic_json(run/'merged'/f'{method}.coverage.json',{'prompts':553,'images':count,'specification':shared})
+    count=validate_outputs(merged_root,method,rows,list(range(553)),4)
+    atomic_json(merged_root/f'{method}.coverage.json',{'prompts':553,'images':count,'specification':shared})
     print('FULL_COVERAGE_OK',method,553,count,flush=True)
 
 
@@ -51,5 +52,6 @@ if __name__=='__main__':
     p.add_argument('--run',required=True)
     p.add_argument('--method',choices=METHODS,required=True)
     p.add_argument('--shards',type=int,required=True)
+    p.add_argument('--destination',type=Path)
     a=p.parse_args()
-    merge(a.root,a.run,a.method,a.shards)
+    merge(a.root,a.run,a.method,a.shards,a.destination)
