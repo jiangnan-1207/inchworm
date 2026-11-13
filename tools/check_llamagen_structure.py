@@ -23,6 +23,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ['source-root','data-root','asset-report','reference-image','out']:
         parser.add_argument('--'+name,type=Path,required=True)
+    parser.add_argument('--parity-only',action='store_true',help='Only check the fixed BF16 adapter on three prompts')
     args=parser.parse_args()
     if not args.reference_image.is_file(): raise ValueError('Missing reference image')
     if json.loads(args.asset_report.read_text())['status']!='assets_match_pinned_sources':
@@ -63,6 +64,32 @@ def main():
         features=features.cpu(); masks=masks.cpu()
         del encoder
         gc.collect(); torch.cuda.empty_cache()
+        if args.parity_only:
+            report['scope']='BF16 adapter gate only; not image-quality validation'
+            model=GPT_models['GPT-XL'](block_size=1024,cls_token_num=120,model_type='t2i').to(
+                device='cuda',dtype=torch.bfloat16).eval()
+            checkpoint=torch.load(directory/'t2i_XL_stage2_512.pt',map_location='cpu',weights_only=True)
+            key=next(k for k in ['model','module','state_dict'] if k in checkpoint)
+            model.load_state_dict(checkpoint[key],strict=True); del checkpoint
+            cond,masks=prepare_condition(features.cuda(),masks.cuda())
+            gates=[]
+            for i,prompt in enumerate(PROMPTS):
+                try:
+                    check_native_prefixes(model,cond[i:i+1],masks[i:i+1])
+                    gate={'prompt':prompt,'status':'passed'}
+                except AssertionError as error:
+                    gate={'prompt':prompt,'status':'failed','error':str(error)}
+                finally:
+                    for layer in model.layers: layer.attention.kv_cache=None
+                    model.causal_mask=None
+                gates.append(gate)
+                print('ADAPTER_GATE_BF16',json.dumps(gate),flush=True)
+            report['adapter_gate_bf16']={'status':'passed' if all(g['status']=='passed' for g in gates) else 'failed',
+                'threshold_total_variation':0.01,'prompts':gates}
+            report['status']='diagnostic_completed'; atomic_json(target,report)
+            if report['adapter_gate_bf16']['status']!='passed': raise SystemExit(1)
+            print('LLAMAGEN_BF16_PARITY_ONLY_OK',args.out,flush=True)
+            return
         vq=VQ_models['VQ-16'](codebook_size=16384,codebook_embed_dim=8).cuda().eval()
         checkpoint=torch.load(directory/'vq_ds16_t2i.pt',map_location='cpu',weights_only=True)
         vq.load_state_dict(checkpoint['model'],strict=True); del checkpoint

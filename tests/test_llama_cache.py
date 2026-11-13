@@ -4,10 +4,57 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
 import sys
+from pathlib import Path
 
 
 @unittest.skipUnless(importlib.util.find_spec('torch'),'PyTorch is installed on compute nodes')
 class PrefixCacheTests(unittest.TestCase):
+    def test_native_capacity_padding_preserves_branches_and_rejects_overflow(self):
+        import torch
+        from llamagen_backend import PrefixCache
+        key=torch.arange(24).reshape(2,1,3,4).to(torch.bfloat16)
+        value=key+1
+        saved=(key.clone(),value.clone())
+        left=PrefixCache(saved,capacity=8); right=PrefixCache(saved,capacity=8)
+        lk,lv=left.update(torch.tensor([3]),torch.zeros(2,1,1,4,dtype=key.dtype),
+            torch.ones(2,1,1,4,dtype=key.dtype))
+        rk,rv=right.update(torch.tensor([3]),torch.ones(2,1,1,4,dtype=key.dtype)*9,
+            torch.ones(2,1,1,4,dtype=key.dtype)*10)
+        self.assertEqual(lk.shape,(2,1,8,4))
+        self.assertEqual(left.prefix[0].shape,(2,1,4,4))
+        self.assertTrue(torch.equal(lk[:,:,:3],key))
+        self.assertTrue(torch.equal(lv[:,:,:3],value))
+        self.assertEqual(lk[:,:,4:].abs().sum().item(),0)
+        self.assertEqual(lv[:,:,4:].abs().sum().item(),0)
+        self.assertTrue(torch.equal(saved[0],key))
+        self.assertEqual(lk[:,:,3].sum().item(),0)
+        self.assertEqual(rk[:,:,3].sum().item(),72)
+        self.assertEqual(rv[:,:,3].sum().item(),80)
+        with self.assertRaises(ValueError):
+            PrefixCache(saved,capacity=3).update(torch.tensor([3]),key[:,:,:1],value[:,:,:1])
+
+    @unittest.skipUnless((Path(__file__).resolve().parents[1]/'benchmarks/LlamaGen/autoregressive/models/gpt.py').is_file(),
+        'Requires the pinned upstream source checkout')
+    def test_real_native_small_gpt_prefill_decode_and_restore_in_both_dtypes(self):
+        import torch
+        from llamagen_backend import check_native_prefixes
+        source=Path(__file__).resolve().parents[1]/'benchmarks/LlamaGen'
+        with patch.object(sys,'path',[str(source),*sys.path]):
+            from autoregressive.models.gpt import ModelArgs,Transformer
+            for dtype in [torch.float32,torch.bfloat16]:
+                with self.subTest(dtype=dtype),torch.inference_mode():
+                    torch.manual_seed(42)
+                    model=Transformer(ModelArgs(dim=32,n_layer=2,n_head=4,multiple_of=16,
+                        caption_dim=8,cls_token_num=3,block_size=16,vocab_size=32,model_type='t2i'))
+                    # Native initialization zeros the head; a nonzero head is
+                    # essential to catch cache/attention errors in this test.
+                    torch.nn.init.normal_(model.output.weight,std=0.1)
+                    model=model.to(dtype=dtype).eval()
+                    cond=torch.randn(1,3,8,dtype=dtype)
+                    masks=torch.tensor([[0,1,1]])
+                    check_native_prefixes(model,cond,masks,length=10)
+                    self.assertTrue(all(layer.attention.kv_cache is None for layer in model.layers))
+
     def test_native_prefill_gate_uses_the_same_kernel_policy_as_generation(self):
         """Regression: a math-only reference prefill falsely rejected the adapter."""
         import torch

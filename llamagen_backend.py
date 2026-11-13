@@ -6,12 +6,14 @@ Branch states never share mutable upstream KVCache buffers.
 from dataclasses import dataclass
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 
 class PrefixCache(nn.Module):
-    def __init__(self, prefix=None):
+    def __init__(self, prefix=None, capacity=None):
         super().__init__()
         self.prefix = prefix
+        self.capacity = capacity
 
     def update(self, positions, key, value):
         offset = 0 if self.prefix is None else self.prefix[0].shape[2]
@@ -21,7 +23,17 @@ class PrefixCache(nn.Module):
         if self.prefix is not None:
             key = torch.cat([self.prefix[0], key], dim=2)
             value = torch.cat([self.prefix[1], value], dim=2)
+        live = key.shape[2]
+        if self.capacity is not None and live > self.capacity:
+            raise ValueError('LlamaGen prefix exceeds native cache capacity')
         self.prefix = (key, value)
+        if self.capacity is not None:
+            # Preserve only immutable live prefixes for branch restoration,
+            # but expose the same zero-filled key/value shape as native KVCache.
+            # Cropping masked future positions is mathematically equivalent,
+            # yet changes BF16 reductions and sometimes SDPA kernel selection.
+            padding = self.capacity-live
+            return F.pad(key,(0,0,0,padding)), F.pad(value,(0,0,0,padding))
         return key, value
 
 
@@ -44,7 +56,8 @@ class LlamaGenBackend:
         self.model = model
         self.cond = torch.cat([cond, torch.zeros_like(cond)+model.cls_embedding.uncond_embedding])
         self.text_length = cond.shape[1]
-        size = self.text_length+length
+        size = ((self.text_length+length+7)//8)*8  # native find_multiple(...,8)
+        self.cache_capacity = size
         self.mask = torch.tril(torch.ones(size, size, dtype=torch.bool, device=cond.device))[None].repeat(2,1,1)
         self.mask[:,:,:self.text_length] &= torch.cat([masks,masks]).bool().unsqueeze(1)
         diagonal = torch.arange(size,device=cond.device)
@@ -63,10 +76,9 @@ class LlamaGenBackend:
         steps = self.text_length if prefix is None else 1
         positions = torch.arange(offset, offset+steps, device=self.cond.device)
         for i,layer in enumerate(self.model.layers):
-            layer.attention.kv_cache = PrefixCache(None if prefix is None else prefix[i])
-        # Crop only invisible trailing key positions. Preserve all mask rows
-        # because upstream indexes rows by absolute input_pos.
-        self.model.causal_mask = self.mask[:,:,:offset+steps]
+            layer.attention.kv_cache = PrefixCache(None if prefix is None else prefix[i],self.cache_capacity)
+        # Keep both axes at native capacity. Its forward indexes absolute rows.
+        self.model.causal_mask = self.mask
         tokens = None if prefix is None else torch.tensor([[state.pending],[state.pending]],device=self.cond.device)
         # Upstream uses math SDPA for image-token decoding.
         if prefix is None:
@@ -105,8 +117,8 @@ class LlamaGenBackend:
 def check_native_prefixes(model,cond,masks,length=32):
     """Compare probabilities at identical prefixes, including a restored branch.
 
-Native full-capacity and functional cropped-cache attention have different
-reduction shapes, so compare numerically, not by assuming bitwise identity.
+    Native and functional caches expose identical padded K/V capacity. Compare
+    numerically without assuming bitwise identity or relaxing the TV threshold.
 """
     from autoregressive.models.generate import logits_to_probs
     combined=torch.cat([cond,torch.zeros_like(cond)+model.cls_embedding.uncond_embedding])

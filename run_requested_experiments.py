@@ -157,7 +157,7 @@ def main():
         'source_sha256':{f.name:sha(f) for f in sorted(Path(__file__).parent.glob('*.py'))},
         'asset_revisions':json.loads((args.root/'benchmarks/setup_records/model_revisions_v1.json').read_text()),
         'timing':'batch1; synchronized; text preparation + image tokens + decode + CPU pixel transfer; excludes model load and PNG I/O',
-        'warmup_images_per_method':1,'llama_cache':'functional immutable prefix concatenation; cropped masked attention; engineering implementation'}
+        'warmup_images_per_method':1,'llama_cache':'functional immutable live prefixes; native-capacity padded attention; engineering implementation'}
     # JSON round-trip makes tuple pairs stable during resume comparison.
     specification=json.loads(json.dumps(specification))
     bind_run(out,specification)

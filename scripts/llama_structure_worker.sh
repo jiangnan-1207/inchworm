@@ -21,6 +21,8 @@ else
     write_root="$DATA_ROOT/outputs"
 fi
 printf 'DIAGNOSTIC_WRITE_ROOT=%s\nASSET_DATA_ROOT=%s\n' "$write_root" "$DATA_ROOT"
+extra=()
+if [ "${LLAMA_PARITY_ONLY:-0}" = 1 ]; then extra+=(--parity-only); fi
 "$LLAMA_PYTHON" -u tools/check_llamagen_structure.py --source-root "$LLAMA_SOURCE_ROOT" \
     --data-root "$DATA_ROOT" --asset-report "$LLAMA_ASSET_REPORT" --reference-image "$reference" \
-    --out "$write_root/llamagen_structure_${SLURM_JOB_ID:?}"
+    --out "$write_root/llamagen_structure_${SLURM_JOB_ID:?}" "${extra[@]}"

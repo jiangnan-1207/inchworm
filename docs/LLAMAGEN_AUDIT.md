@@ -47,3 +47,11 @@
 若写日志出现 `Disk quota exceeded`，先检查容量配额和文件数配额。GPU作业在1秒内以0:53退出且没有日志，可能尚未进入Python。释放少量字节不能解决inode限额，仅把Slurm日志换位置也不能解决报告/临时缓存写入失败。
 
 本worker支持 `LLAMA_DIAGNOSTIC_ROOT=/another/shared/path`：诊断报告、重建图、TMPDIR及HF/Torch/CUDA/Inductor/Triton缓存都写到该路径；DATA_ROOT仍指向原权重、环境所在目录。提交前在登录节点创建该目录及logs并验证文件可创建，同时将sbatch的output/error指向新目录logs。仅用于少量诊断输出，不能直接将全部benchmark图片或模型权重迁移到共享project。common.sh仍会确保原scratch的tmp/logs目录存在，因此这两个旧目录需保留；已存在时不会往里新建文件。模型与源码不改，也不删除旧实验数据。完整实验继续前仍需处理scratch文件数配额。
+
+## 15515972结果与BF16形状对齐
+
+本次VQ参考图重建MSE(0—1)=0.00121523，直接解码与decode_code的最大绝对差7.54e-6；FP32原生KV与完整前缀在所查16步的最大TV=2.57e-6。三条文字在同一图像前缀下的分布有差异，红苹果文字NLL略低，但单图不能证明文字对齐质量合格。Adapter FP32通过，BF16在t=3以TV=0.0209348失败。因此不能宣布LlamaGen已修复，也不能把原生错图归因于Inchworm。
+
+针对BF16差异，适配器原先返回裁短K/V，原生KVCache返回完整容量的零填充K/V。数学等价不保证BF16计算相同；现保留不可变的实际前缀用于分支恢复，同时向attention返回按原生规则对齐到8的完整容量K/V，并使用同形状的causal mask。阈值仍为0.01、CFG与采样不变。增加分支不串写、padding/越界测试，并在CI用固定上游源码的小GPT对FP32/BF16执行真实prefill/decode/restore检查。CPU小模型通过后，仍需在服务器完整checkpoint验证BF16 gate；这不代表512原生生成质量已恢复。缓存实现改变后，新的LlamaGen性能数据应重新测量并记录代码版本。
+
+导出 `LLAMA_PARITY_ONLY=1` 后提交同一worker，可只验证三条提示词各32步的BF16原生/适配器及缓存恢复，跳过VQ和完整图像重建。仍沿用project写入覆盖；全部通过才输出 `LLAMAGEN_BF16_PARITY_ONLY_OK`，任一失败会保存报告并以非零退出。该模式仅验证适配器，不验证生成图文一致性。
