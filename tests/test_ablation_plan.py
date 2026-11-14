@@ -11,6 +11,13 @@ from test_variant_core import Backend
 
 
 class AblationTests(unittest.TestCase):
+    def test_pure_backbone_is_distinct_from_every_inchworm_version(self):
+        self.assertEqual(controller_method('backbone'),'backbone')
+        self.assertFalse(any(ablation_flags('backbone').values()))
+        self.assertEqual(variant_method('janus1b','backbone'),'janus1b_backbone')
+        self.assertNotIn('backbone',DEFAULT_ABLATIONS)
+        self.assertNotEqual(variant_method('janus1b','backbone'),variant_method('janus1b','original'))
+
     def test_each_ablation_changes_only_its_intended_modes(self):
         expected={'guard_only':('entropy','topk'),'guard_temperature':('entropy','temperature'),
             'guard_gap':('mixed','topk'),'combined':('mixed','temperature')}

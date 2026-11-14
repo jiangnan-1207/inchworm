@@ -4,7 +4,7 @@ from inchworm_core import Config
 
 DEFAULT_ABLATIONS=('guard_only','guard_temperature','guard_gap')
 VARIANTS=(*DEFAULT_ABLATIONS,'combined')
-BENCHMARK_VERSIONS=(*VARIANTS,'original')
+BENCHMARK_VERSIONS=(*VARIANTS,'original','backbone')
 
 
 def variant_config(version):
@@ -22,7 +22,7 @@ def variant_config(version):
 
 
 def ablation_flags(version):
-    if version=='original':
+    if version in ['original','backbone']:
         return {'original_path_guard':False,'adaptive_temperature':False,'mixed_high_H_high_G':False}
     config=variant_config(version)
     return {'original_path_guard':True,'adaptive_temperature':config.proposal_mode=='temperature',
@@ -30,9 +30,10 @@ def ablation_flags(version):
 
 
 def benchmark_config(version):
-    return Config() if version=='original' else variant_config(version)
+    return Config() if version in ['original','backbone'] else variant_config(version)
 
 
 def controller_method(version):
     if version not in BENCHMARK_VERSIONS: raise ValueError('Unknown benchmark version')
+    if version=='backbone': return 'backbone'
     return 'inchworm' if version=='original' else 'inchworm_variant'

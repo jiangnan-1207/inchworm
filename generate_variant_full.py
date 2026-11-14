@@ -48,7 +48,7 @@ def main():
     torch.backends.cudnn.allow_tf32=False
     torch.backends.cudnn.benchmark=False
     with torch.inference_mode():
-        run=load_model(a.model,a.root,a.data_root) if a.variant=='original' else load_model(a.model,a.root,a.data_root,config)
+        run=load_model(a.model,a.root,a.data_root) if a.variant in ['original','backbone'] else load_model(a.model,a.root,a.data_root,config)
         image,_,_=run(rows[ids[0]]['prompt'],generation_method); del image
         for i in ids:
             for j in range(4):
@@ -60,6 +60,8 @@ def main():
                 torch.cuda.synchronize(); torch.cuda.reset_peak_memory_stats()
                 start=time.perf_counter()
                 image,token_seconds,diag=run(rows[i]['prompt'],generation_method)
+                if a.variant=='backbone' and any(diag[k] for k in ['backtracks','checks','accepted_edits','kept_original']):
+                    raise ValueError('Pure backbone run unexpectedly used a backtracking controller')
                 torch.cuda.synchronize(); seconds=time.perf_counter()-start
                 commit_image(out,method,i,j,rows[i],spec,image,{
                     'seed':seed,'generation_seconds':token_seconds,'latency_seconds':seconds,

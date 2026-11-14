@@ -6,6 +6,7 @@ from ablation_plan import BENCHMARK_VERSIONS
 def variant_method(model,version='combined'):
     if model not in VARIANT_METHODS: raise ValueError('Task 4 supports Janus-Pro-1B and LlamaGen')
     if version not in BENCHMARK_VERSIONS: raise ValueError('Unknown variant version')
+    if version=='backbone': return f'{model}_backbone'
     if version=='original': return f'{model}_original_inchworm'
     return VARIANT_METHODS[model] if version=='combined' else f'{model}_{version}'
 
