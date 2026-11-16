@@ -9,9 +9,15 @@ import time
 from types import SimpleNamespace
 
 from protocol import METHODS, TASKS, atomic_json, load_prompts, select_ids, validate_outputs
+from short_worker_tmp import short_worker_tmp
 
 
 def main():
+    with short_worker_tmp():
+        return evaluate()
+
+
+def evaluate():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root',required=True)
     parser.add_argument('--scratch',required=True)
