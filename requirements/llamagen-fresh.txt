@@ -1,0 +1,13 @@
+# Isolated recipe compatible with the upstream 2024 code; upstream does not pin these versions.
+numpy==1.26.4
+Pillow==10.2.0
+transformers==4.36.2
+tokenizers==0.15.2
+accelerate==0.25.0
+huggingface-hub==0.20.3
+sentencepiece==0.1.99
+timm==0.9.12
+einops==0.7.0
+ftfy==6.1.1
+beautifulsoup4==4.12.3
+pandas==1.5.3
